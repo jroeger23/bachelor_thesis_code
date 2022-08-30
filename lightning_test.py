@@ -51,7 +51,6 @@ class LightningModule(pl.LightningModule):
       if isinstance(self.logger, pl_loggers.TensorBoardLogger):
         logger : SummaryWriter = self.logger.experiment
         logger.add_pr_curve(f'pr/{c_ix}-{labels[c_ix]}', c_label, c_prob, global_step=self.global_step)
-        self.log(f'auroc/{c_ix}-{labels[c_ix]}', auroc(c_label, c_prob))
 
   def validation_step(self, batch, batch_ix):
     x, y = batch
@@ -76,6 +75,6 @@ test_loader = DataLoader(dataset=test_data, batch_size=60, shuffle=False, num_wo
 
 es = pl_callbacks.EarlyStopping(monitor='validate/acc', mode='max', min_delta=0.00003, patience=4, strict=True)
 
-trainer = pl.Trainer(max_epochs=5, val_check_interval=100, limit_val_batches=0.1, callbacks=[es])
+trainer = pl.Trainer(max_epochs=5, val_check_interval=100, limit_val_batches=0.4, callbacks=[es])
 trainer.validate(model=m, dataloaders=test_loader)
 trainer.fit(model=m, train_dataloaders=train_loader, val_dataloaders=test_loader)
