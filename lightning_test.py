@@ -68,6 +68,12 @@ class LightningModule(pl.LightningModule):
   def configure_optimizers(self):
     return torch.optim.Adam(self.parameters())
 
+  def on_train_end(self) -> None:
+    if isinstance(self.logger, pl_loggers.TensorBoardLogger):
+      logger : SummaryWriter = self.logger.experiment
+      x = torch.unsqueeze(test_data[0][0],dim=0)
+      logger.add_graph(model=self.model, input_to_model=x)
+
 m = LightningModule()
 
 train_loader = DataLoader(dataset=train_data, batch_size=60, shuffle=True, num_workers=4)
