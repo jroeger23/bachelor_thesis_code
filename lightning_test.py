@@ -1,12 +1,15 @@
 import logging
+from re import S
 
 import pytorch_lightning as pl
 import pytorch_lightning.callbacks as pl_callbacks
 import pytorch_lightning.loggers as pl_loggers
 import torch
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard.writer import SummaryWriter
 
 import common.data
+from common.metrics import classProbs, auroc
 
 logging.getLogger().setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
@@ -28,7 +31,6 @@ class LightningModule(pl.LightningModule):
       torch.nn.Linear(in_features=49, out_features=10),
     )
 
-
   def training_step(self, batch):
     x, y = batch
     logits = self.model(x)
@@ -36,10 +38,28 @@ class LightningModule(pl.LightningModule):
     self.log('train/loss', loss.item())
     return loss
 
+  def on_validation_epoch_start(self) -> None:
+    self.val_probs = []
+    self.val_labels = []
+
+  def on_validation_epoch_end(self) -> None:
+    probs = torch.vstack(self.val_probs)
+    y = torch.cat(self.val_labels)
+
+    for c_ix, (c_label, c_prob) in enumerate(classProbs(y, probs)):
+      self.log(f'auroc/{c_ix}-{labels[c_ix]}', auroc(c_label, c_prob))
+      if isinstance(self.logger, pl_loggers.TensorBoardLogger):
+        logger : SummaryWriter = self.logger.experiment
+        logger.add_pr_curve(f'pr/{c_ix}-{labels[c_ix]}', c_label, c_prob, global_step=self.global_step)
+        self.log(f'auroc/{c_ix}-{labels[c_ix]}', auroc(c_label, c_prob))
+
   def validation_step(self, batch, batch_ix):
     x, y = batch
     probs = torch.nn.functional.softmax(self.model(x), dim=1)
     loss = torch.nn.functional.cross_entropy(probs, y)
+
+    self.val_probs.append(probs)
+    self.val_labels.append(y)
 
     acc = (probs.argmax(1) == y).type(torch.float).mean()
 
@@ -57,4 +77,5 @@ test_loader = DataLoader(dataset=test_data, batch_size=60, shuffle=False, num_wo
 es = pl_callbacks.EarlyStopping(monitor='validate/acc', mode='max', min_delta=0.00003, patience=4, strict=True)
 
 trainer = pl.Trainer(max_epochs=5, val_check_interval=100, limit_val_batches=0.1, callbacks=[es])
+trainer.validate(model=m, dataloaders=test_loader)
 trainer.fit(model=m, train_dataloaders=train_loader, val_dataloaders=test_loader)
