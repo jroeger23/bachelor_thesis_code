@@ -28,3 +28,4 @@ def mnist():
   logger.debug(f'  Labels = {labels}')
 
   return train, test, labels
+
