@@ -1,2 +1,2 @@
 from .mnist import *
-from .opportunity import Opportunity, OpportunityOptions
+from .opportunity import Opportunity, OpportunityOptions, OpportunityView
