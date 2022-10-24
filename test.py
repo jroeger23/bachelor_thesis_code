@@ -1,5 +1,5 @@
 import torch
-import common.data
+from common.data import mnist
 import logging
 import tqdm
 from itertools import islice
@@ -9,7 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 logging.getLogger().setLevel(logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-train_data, test_data, labels = common.data.mnist()
+train_data, test_data, labels = mnist()
 
 
 m = torch.nn.Sequential(
