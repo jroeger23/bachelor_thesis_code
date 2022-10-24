@@ -262,7 +262,7 @@ class Opportunity(Dataset):
     
     logger.info(f'Loading Opportunity Dataset...')
     logger.info(f'  - Segmentation (w={window}, s={stride})')
-    logger.info(f'  - Subsets {opts}')
+    logger.info(f'  - Subsets {list(map(lambda o: o.name, opts))}')
 
     self.columns = parse_columns_file(os.path.join(self.root, 'column_names.txt'))
 
@@ -286,7 +286,7 @@ class Opportunity(Dataset):
       raw = load_cached_dat(root=self.root, name=prefix+suffix, logger=logger)
       memory += getsizeof(raw.storage())
       _, tensor, labels = split_data_record(raw)
-      data.append(SegmentedDataset(tensor=tensor, labels=labels, window=24, stride=12))
+      data.append(SegmentedDataset(tensor=tensor, labels=labels, window=window, stride=stride))
 
     self.data = ConcatDataset(data)
 
