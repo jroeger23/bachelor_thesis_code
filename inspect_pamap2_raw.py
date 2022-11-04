@@ -1,5 +1,6 @@
 from common.data import Opportunity, OpportunityOptions, OpportunityView, Pamap2, Pamap2Options, Pamap2View
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 validation_data = Pamap2(
   root='/home/jonas/Stuff/Datasets/PAMAP2_Dataset',
@@ -22,23 +23,39 @@ for s, l in reversed(validation_data):
   if l == label3:
     segments3.append(s)
 
-view = Pamap2View(['imu_ankle'])
-segment1 = view(segments1[12])
-segment2 = view(segments2[12])
-segment3 = view(segments3[12])
+view1 = Pamap2View(['imu_ankle'])
+view2 = Pamap2View(['imu_hand'])
+segment1 = view1(segments1[12])
+segment2 = view1(segments2[12])
+segment3 = view1(segments3[12])
+segment4 = view2(segments3[12])
 
-fig, ax = plt.subplots(3, 1)
-for a in ax:
+fig_a, ax_a = plt.subplots(3, 1)
+for a in ax_a:
   a.set_ylabel("$\Delta V$")
   a.set_xlabel("$T$")
   a.set_yticks([])
   a.set_xticks([])
 
-ax[0].set_title(Pamap2View.describeLabels(label1))
-ax[0].plot(segment1[:,1])
-ax[1].set_title(Pamap2View.describeLabels(label2))
-ax[1].plot(segment2[:,1])
-ax[2].set_title(Pamap2View.describeLabels(label3))
-ax[2].plot(segment3[:,1])
-fig.tight_layout()
+ax_a[0].plot(segment1[:,1])
+ax_a[1].plot(segment2[:,1])
+ax_a[2].plot(segment3[:,1])
+fig_a.tight_layout()
+
+
+fig_b, ax_b = plt.subplots(9,1)
+colors = mpl.colormaps['Accent']
+for i, a in enumerate(ax_b):
+  a.set_yticks([])
+  a.set_xticks([])
+  a.plot(segment3[:,1+i], color=colors(i/9))
+fig_b.tight_layout()
+
+fig_c, ax_c = plt.subplots(9,1)
+for i, a in enumerate(ax_c):
+  a.set_yticks([])
+  a.set_xticks([])
+  a.plot(segment4[:,1+i], color=colors(i/9))
+fig_c.tight_layout()
+
 plt.show(block=True)
