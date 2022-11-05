@@ -154,6 +154,15 @@ def ensure_download_zip(url : str, root : str, dataset_name : str, zip_dirs : t.
       zf.extractall(path=dataset_direcoty)
   logger.info(f'Done!')
 
+class ComposeTransforms:
+  def __init__(self, *transforms : t.Tuple[t.Callable]):
+    self.transforms = transforms
+  
+  def __call__(self, batch : torch.Tensor, labels : torch.Tensor):
+    for t in self.transforms:
+      batch, labels = t(batch, labels)
+
+    return batch, labels
 
 
 class SegmentedDataset(Dataset):
