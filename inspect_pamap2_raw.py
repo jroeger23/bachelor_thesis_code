@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 validation_data = Pamap2(
-  root='/home/jonas/Stuff/Datasets',
   window=300,
   stride=300,
   opts=[Pamap2Options.ALL_SUBJECTS, Pamap2Options.OPTIONAL1]

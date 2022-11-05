@@ -2,7 +2,6 @@ from common.data import LARa, LARaOptions, LARaClassLabelView, describeLARaLabel
 from torch.utils.data import DataLoader
 
 validation_data = LARa(
-  root='/home/jonas/Stuff/Datasets',
   window=300,
   stride=300,
   transform=ComposeTransforms(LARaClassLabelView()),
