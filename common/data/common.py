@@ -103,7 +103,7 @@ def sha512file(path : str) -> str:
 
     return sha512.hexdigest()
 
-def ensure_download_file(url : str, file : str, sha512_hex : str | None = None):
+def ensure_download_file(url : str, file : str, sha512_hex : str = None):
   # check file
   if os.path.exists(file):
     if sha512_hex is None:
@@ -132,7 +132,7 @@ def ensure_download_file(url : str, file : str, sha512_hex : str | None = None):
         raise RuntimeError(f'"{file} does not match the given hash.')
 
 
-def ensure_download_zip(url : str, root : str, dataset_name : str, zip_dirs : t.List[int] = [], sha512_hex : str | None = None):
+def ensure_download_zip(url : str, root : str, dataset_name : str, zip_dirs : t.List[int] = [], sha512_hex : str = None):
   dataset_direcoty = os.path.join(root, dataset_name)
   zip_path = dataset_direcoty + '.zip'
   if os.path.exists(dataset_direcoty):
