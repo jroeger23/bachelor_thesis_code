@@ -3,9 +3,11 @@ import os
 import typing as t
 from enum import Enum
 from itertools import product
+from sys import getsizeof
+
+import torch
 from si_prefix import si_format
 from torch.utils.data import ConcatDataset, Dataset
-from sys import getsizeof
 
 from .common import SegmentedDataset, ensure_download_zip, load_cached_csv
 
@@ -13,6 +15,128 @@ logger = logging.getLogger(__name__)
 
 DOWNLOAD_URL = 'https://zenodo.org/record/3862782/files/IMU data.zip'
 SHA512_HEX = '3609fc9f610aec8aa01b6aa0c4c63927ccb309b68a89dab625e1673dd9724fe8da94a2c42466ee4976ebd96c72b9ef337cdc837fbc944b69172e76d7887ca868'
+
+
+labels_map = {
+  0 : 'standing',
+  1 : 'walking',
+  2 : 'cart',
+  3 : 'handling (upwards)',
+  4 : 'handling (centered)',
+  5 : 'handling (downwards)',
+  6 : 'synchronization',
+  7 : 'none',
+}
+
+data_view_indices = {
+  'Time' : 0,
+  'LA_AccelerometerX' : 1,
+  'LA_AccelerometerY' : 2,
+  'LA_AccelerometerZ' : 3,
+  'LA_GyroscopeX' : 4,
+  'LA_GyroscopeY' : 5,
+  'LA_GyroscopeZ' : 6,
+  'LL_AccelerometerX' : 7,
+  'LL_AccelerometerY' : 8,
+  'LL_AccelerometerZ' : 9,
+  'LL_GyroscopeX' : 10,
+  'LL_GyroscopeY' : 11,
+  'LL_GyroscopeZ' : 12,
+  'N_AccelerometerX' : 13,
+  'N_AccelerometerY' : 14,
+  'N_AccelerometerZ' : 15,
+  'N_GyroscopeX' : 16,
+  'N_GyroscopeY' : 17,
+  'N_GyroscopeZ' : 18,
+  'RA_AccelerometerX' : 19,
+  'RA_AccelerometerY' : 20,
+  'RA_AccelerometerZ' : 21,
+  'RA_GyroscopeX' : 22,
+  'RA_GyroscopeY' : 23,
+  'RA_GyroscopeZ' : 24,
+  'RL_AccelerometerX' : 25,
+  'RL_AccelerometerY' : 26,
+  'RL_AccelerometerZ' : 27,
+  'RL_GyroscopeX' : 28,
+  'RL_GyroscopeY' : 29,
+  'RL_GyroscopeZ' : 30,
+}
+
+labels_view_indices = {
+  'Class' : 0,
+  'I-A_GaitCycle' : 2,
+  'I-B_Step' : 3,
+  'I-C_StandingStill' : 3,
+  'II-A_Upwards' : 4,
+  'II-B_Centred' : 5,
+  'II-C_Downwards' : 6,
+  'II-D_NoIntentionalMotion' : 7,
+  'II-E_TorsoRotation' : 8,
+  'III-A_Right' : 9,
+  'III-B_Left' : 10,
+  'III-C_NoArms' : 11,
+  'IV-A_BulkyUnit' : 12,
+  'IV-B_HandyUnit' : 13,
+  'IV-C_UtilityAux' : 14,
+  'IV-D_Cart' : 15,
+  'IV-E_Computer' : 16,
+  'IV-F_NoItem' : 17,
+  'V-A_None' : 18,
+  'VI-A_Error' : 19,
+}
+
+def describeLARaLabels(labels) -> t.List[str]:
+  if type(labels) is torch.Tensor:
+    if len(labels) == 1:
+      return labels_map[int(labels.item())]
+    elif labels.shape[1] == 1:
+      return [labels_map[int(l.item())] for l in labels]
+    else:
+      raise ValueError('Cannot describe multi dimensional labels')
+  elif type(labels) is t.List:
+    return [labels_map[int(l)] for l in labels]
+  else:
+    return labels_map[int(labels)]
+
+
+class LARaLabelsView():
+  def __init__(self, entries : t.List[str]) -> None:
+    self.indices = [labels_view_indices[e] for e in entries]
+
+  def __call__(self, batch : torch.Tensor, labels : torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    labels = torch.atleast_2d(labels)
+    return batch, labels[:, self.indices]
+
+class LARaDataView():
+  def __init__(self, entries : t.List[str]) -> None:
+    self.indices = [data_view_indices[e] - 1 for e in entries] # adjust for trimmed time
+
+  def __call__(self, batch : torch.Tensor, labels : torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    batch = torch.atleast_2d(batch)
+    return batch[:, self.indices], labels
+
+  def entries() -> t.List[str]:
+    return list(data_view_indices.keys())
+
+class LARaClassLabelView():
+  def __init__(self):
+    self.view = LARaLabelsView(entries=['Class'])
+
+  def __call__(self, batch : torch.Tensor, labels : torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    return self.view(batch, labels)
+
+  def entries() -> t.List[str]:
+    return list(labels_view_indices.keys())
+
+class LARaIMUView():
+  def __init__(self, locations : t.List[str]):
+    suffixes = ['_AccelerometerX', '_AccelerometerY', '_AccelerometerZ', '_GyroscopeX', '_GyroscopeY', '_GyroscopeZ']
+    entries = [ l + s for l,s in product(locations, suffixes) ]
+    self.view = LARaDataView(entries=entries)
+
+  def __call__(self, batch : torch.Tensor, labels : torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    return self.view(batch, labels)
+
 
 class LARaOptions(Enum):
   ALL_SUBJECTS = 100
@@ -71,8 +195,6 @@ class LARa(Dataset):
     self.dataset_name = 'LARa'  
     self.zip_dirs = [ 'IMU data/' ]
     self.root = os.path.join(root, self.dataset_name, 'IMU data')
-    self.transform = None
-
 
     if download:
       ensure_download_zip(url=DOWNLOAD_URL, dataset_name=self.dataset_name, root=root, zip_dirs=self.zip_dirs, sha512_hex=SHA512_HEX)
@@ -138,6 +260,7 @@ class LARa(Dataset):
       _, labels = load_cached_csv(root=self.root, name=f'{name}_labels', logger=logger)
       memory += getsizeof(tensor.storage())
       memory += getsizeof(labels.storage())
+      tensor, labels = transform(tensor, labels)
       data.append(SegmentedDataset(tensor=tensor, labels=labels, window=window, stride=stride))
 
     self.data = ConcatDataset(data)
