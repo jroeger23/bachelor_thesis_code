@@ -2,6 +2,10 @@ import torch
 import os
 import logging
 import tqdm
+import requests
+from zipfile import ZipFile
+import typing as t
+
 
 from torch.utils.data import Dataset
 
@@ -47,6 +51,43 @@ def load_cached_dat(root : str, name : str, dtype=torch.float32, logger=logger):
 
 def majority_label(labels : torch.Tensor):
   return labels.mode(dim=0)[0]
+
+
+def ensure_download_file(url : str, file : str):
+  # Download file if not present
+  if not os.path.exists(file):
+    logger.info(f'"{file}" not present, downloading from "{url}"...')
+    response = requests.get(url=url, verify=True, stream=True)
+    chunk_size = 4096
+    length = int(response.headers.get('content-length'))
+    with open(file, 'wb') as f:
+      with tqdm.tqdm(desc=os.path.basename(file), unit='B', unit_scale=True, unit_divisor=1024, total=length) as progress:
+        for d in response.iter_content(chunk_size=chunk_size):
+          f.write(d)
+          progress.update(n=chunk_size)
+
+
+def ensure_download_zip(url : str, root : str, dataset_name : str, zip_dirs : t.List[int] = []):
+  dataset_direcoty = os.path.join(root, dataset_name)
+  zip_path = dataset_direcoty + '.zip'
+  if os.path.exists(dataset_direcoty):
+    # OK
+    logger.debug(f'Dataset at "{dataset_direcoty}" is present.')
+    return
+
+  logger.debug(f'Ensuring root path \"{root}\"')
+  os.makedirs(name=root, exist_ok=True)
+
+  # Download zip if not present
+  ensure_download_file(url=url, file=zip_path)
+
+  logger.info(f'Unzipping "{zip_path}"...')
+  with ZipFile(zip_path, 'r') as zf:
+    for d in zip_dirs:
+      zf.extract(member=d, path=dataset_direcoty)
+    else:
+      zf.extractall(path=dataset_direcoty)
+  logger.info(f'Done!')
 
 
 
