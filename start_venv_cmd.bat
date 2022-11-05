@@ -1,9 +1,10 @@
+@echo off
 if not exist .\venv\Scripts\activate.bat (
-  python3.exe -m venv venv
+  echo "No venv found. Run setup_venv.bat first."
+  pause
+  exit 1
 )
 
 call .\venv\Scripts\activate.bat
-
-pip.exe install -r requirements.txt
 
 cmd.exe
