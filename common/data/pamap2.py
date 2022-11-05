@@ -13,7 +13,8 @@ from .common import SegmentedDataset, ensure_download_zip, load_cached_dat
 
 logger = logging.getLogger(__name__)
 
-download_url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00231/PAMAP2_Dataset.zip'
+DOWNLOAD_URL = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00231/PAMAP2_Dataset.zip'
+SHA512_HEX = '14e96ccbc985abab0df796a09521506001eee02cf43e85fdc3dcadfca6ecd3f7b457daf5ce35a3b63251f746619b036d18582a7cee35505501a526af1bb397fd'
 
 def split_data_record(raw : torch.Tensor):
   timestamp = raw[:, 0]
@@ -114,7 +115,7 @@ class Pamap2(Dataset):
 
 
     if download:
-      ensure_download_zip(url=download_url, dataset_name=self.dataset_name, root=root, zip_dirs=self.zip_dirs)
+      ensure_download_zip(url=DOWNLOAD_URL, dataset_name=self.dataset_name, root=root, zip_dirs=self.zip_dirs, sha512_hex=SHA512_HEX)
     
     logger.info(f'Loading Pamap2 Dataset...')
     logger.info(f'  - Segmentation (w={window}, s={stride})')

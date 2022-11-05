@@ -13,7 +13,8 @@ from .common import SegmentedDataset, load_cached_dat, ensure_download_zip
 
 logger = logging.getLogger(__name__)
 
-download_url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00226/OpportunityUCIDataset.zip'
+DOWNLOAD_URL = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00226/OpportunityUCIDataset.zip'
+SHA512_HEX = 'adf10dab0e44eb5a3c49d48f92acc8c1c14b48d143aecaa37398c9d7a8d728a2ff5fcaa49ee24ca3276156bbac46d41ce9764567afbf48b16d53959e6d5e1cf2'
 
 def parse_column_description_line(columns : t.MutableMapping[int, str], line : str):
   if line.isspace():
@@ -267,7 +268,7 @@ class Opportunity(Dataset):
 
 
     if download:
-      ensure_download_zip(url=download_url, dataset_name=self.dataset_name, root=root, zip_dirs=[self.zip_dir+'/'])
+      ensure_download_zip(url=DOWNLOAD_URL, dataset_name=self.dataset_name, root=root, zip_dirs=[self.zip_dir+'/'], sha512_hex=SHA512_HEX)
 
     logger.info(f'Loading Opportunity Dataset...')
     logger.info(f'  - Segmentation (w={window}, s={stride})')
