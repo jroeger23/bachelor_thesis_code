@@ -9,10 +9,11 @@ import torch
 from si_prefix import si_format
 from torch.utils.data import Dataset, ConcatDataset
 
-from .common import SegmentedDataset, load_cached_dat
+from .common import SegmentedDataset, load_cached_dat, ensure_download_zip
 
 logger = logging.getLogger(__name__)
 
+download_url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00226/OpportunityUCIDataset.zip'
 
 def parse_column_description_line(columns : t.MutableMapping[int, str], line : str):
   if line.isspace():
@@ -256,10 +257,18 @@ class Opportunity(Dataset):
                window : int = 24,
                stride : int = 12,
                transform = None,
+               download : bool = True,
                opts : t.Iterable[OpportunityOptions] = []):
-    self.root = root
+
+    self.dataset_name = 'opportunity'  
+    self.zip_dir = 'OpportunityUCIDataset/dataset'
+    self.root = os.path.join(root, self.dataset_name, self.zip_dir)
     self.transform = None
-    
+
+
+    if download:
+      ensure_download_zip(url=download_url, dataset_name=self.dataset_name, root=root, zip_dirs=[self.zip_dir+'/'])
+
     logger.info(f'Loading Opportunity Dataset...')
     logger.info(f'  - Segmentation (w={window}, s={stride})')
     logger.info(f'  - Subsets {list(map(lambda o: o.name, opts))}')

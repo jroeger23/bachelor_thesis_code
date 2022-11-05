@@ -1,4 +1,5 @@
 import logging
+import os
 import typing as t
 from enum import Enum
 from itertools import chain
@@ -8,9 +9,11 @@ import torch
 from si_prefix import si_format
 from torch.utils.data import ConcatDataset, Dataset
 
-from .common import SegmentedDataset, load_cached_dat
+from .common import SegmentedDataset, ensure_download_zip, load_cached_dat
 
 logger = logging.getLogger(__name__)
+
+download_url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00231/PAMAP2_Dataset.zip'
 
 def split_data_record(raw : torch.Tensor):
   timestamp = raw[:, 0]
@@ -96,14 +99,22 @@ class Pamap2Options(Enum):
   FULL = 300
 
 
+
 class Pamap2(Dataset):
-  def __init__(self, root : str,
+  def __init__(self, root : str = './data',
                window : int = 24,
                stride : int = 12,
                transform = None,
+               download : bool = True,
                opts : t.Iterable[Pamap2Options] = []):
-    self.root = root
+    self.dataset_name = 'pamap2'  
+    self.zip_dirs = [ 'PAMAP2_Dataset/Protocol/', 'PAMAP2_Dataset/Optional/' ]
+    self.root = os.path.join(root, self.dataset_name, 'PAMAP2_Dataset')
     self.transform = None
+
+
+    if download:
+      ensure_download_zip(url=download_url, dataset_name=self.dataset_name, root=root, zip_dirs=self.zip_dirs)
     
     logger.info(f'Loading Pamap2 Dataset...')
     logger.info(f'  - Segmentation (w={window}, s={stride})')
