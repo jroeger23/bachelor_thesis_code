@@ -172,11 +172,11 @@ class ComposeTransforms(Transform):
     return batch, labels
 
   def __str__(self) -> str:
-    s = "ComposeTransforms: \n  [\n"
+    s = "ComposeTransforms: \n\t[\n"
     for t in self.transforms:
-      s += f'    -> {str(t)}\n'
+      s += f'\t  -> {str(t)}\n'
     
-    return s + "  ]"
+    return s + "\t]"
 
 
 class SegmentedDataset(Dataset):

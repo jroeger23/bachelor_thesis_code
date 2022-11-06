@@ -141,15 +141,16 @@ class LARaClassLabelView():
 
 class LARaIMUView():
   def __init__(self, locations : t.List[str]):
+    self.locations = locations
     suffixes = ['_AccelerometerX', '_AccelerometerY', '_AccelerometerZ', '_GyroscopeX', '_GyroscopeY', '_GyroscopeZ']
-    self.entries = [ l + s for l,s in product(locations, suffixes) ]
-    self.view = LARaDataView(entries=self.entries)
+    entries = [ l + s for l,s in product(locations, suffixes) ]
+    self.view = LARaDataView(entries=entries)
 
   def __call__(self, batch : torch.Tensor, labels : torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
     return self.view(batch, labels)
 
   def __str__(self) -> str:
-    return f'LARaIMUView({self.entries})'
+    return f'LARaIMUView({self.locations})'
 
 class LARaOptions(Enum):
   ALL_SUBJECTS = 100
@@ -215,7 +216,7 @@ class LARa(Dataset):
     logger.info(f'Loading LARa Dataset...')
     logger.info(f'  - Segmentation (w={window}, s={stride})')
     logger.info(f'  - Subsets {list(map(lambda o: o.name, opts))}')
-    logger.info(f'  - {str(transform)}')
+    logger.info(f'  - {str(transform)}',)
 
     subjects = []
     if LARaOptions.SUBJECT07 in opts or LARaOptions.ALL_SUBJECTS in opts: subjects.append('S07')
