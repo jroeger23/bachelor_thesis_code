@@ -9,7 +9,7 @@ import torch
 from si_prefix import si_format
 from torch.utils.data import ConcatDataset, Dataset
 
-from .common import SegmentedDataset, ensure_download_zip, load_cached_csv
+from .common import SegmentedDataset, Transform, ensure_download_zip, load_cached_csv
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ def describeLARaLabels(labels) -> t.List[str]:
     return labels_map[int(labels)]
 
 
-class LARaLabelsView():
+class LARaLabelsView(Transform):
   def __init__(self, entries : t.List[str]) -> None:
     self.entries = entries
     self.indices = [labels_view_indices[e] for e in entries]
@@ -111,7 +111,7 @@ class LARaLabelsView():
   def __str__(self) -> str:
     return f'LARaLabelsView({self.entries})'
 
-class LARaDataView():
+class LARaDataView(Transform):
   def __init__(self, entries : t.List[str]) -> None:
     self.entries = entries
     self.indices = [data_view_indices[e] - 1 for e in entries] # adjust for trimmed time
@@ -126,7 +126,7 @@ class LARaDataView():
   def __str__(self) -> str:
     return f'LARaDataView({self.entries})'
 
-class LARaClassLabelView():
+class LARaClassLabelView(Transform):
   def __init__(self):
     self.view = LARaLabelsView(entries=['Class'])
 
@@ -139,7 +139,7 @@ class LARaClassLabelView():
   def __str__(self) -> str:
     return f'LARaClassLabelView'
 
-class LARaIMUView():
+class LARaIMUView(Transform):
   def __init__(self, locations : t.List[str]):
     self.locations = locations
     suffixes = ['_AccelerometerX', '_AccelerometerY', '_AccelerometerZ', '_GyroscopeX', '_GyroscopeY', '_GyroscopeZ']
