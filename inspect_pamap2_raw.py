@@ -1,4 +1,4 @@
-from common.data import Opportunity, OpportunityOptions, OpportunityView, Pamap2, Pamap2Options, Pamap2View
+from common.data import Opportunity, OpportunityOptions, OpportunityView, Pamap2, Pamap2Options, Pamap2IMUView
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
@@ -22,12 +22,12 @@ for s, l in reversed(validation_data):
   if l == label3:
     segments3.append(s)
 
-view1 = Pamap2View(['imu_ankle'])
-view2 = Pamap2View(['imu_hand'])
-segment1 = view1(segments1[12])
-segment2 = view1(segments2[12])
-segment3 = view1(segments3[12])
-segment4 = view2(segments3[12])
+view1 = Pamap2IMUView(['imu_a'], with_heart_rate=False)
+view2 = Pamap2IMUView(['imu_h'], with_heart_rate=False)
+segment1, _ = view1(segments1[12], l)
+segment2, _ = view1(segments2[12], l)
+segment3, _ = view1(segments3[12], l)
+segment4, _ = view2(segments3[12], l)
 
 fig_a, ax_a = plt.subplots(3, 1)
 for a in ax_a:
