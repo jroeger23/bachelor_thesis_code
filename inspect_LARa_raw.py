@@ -1,10 +1,10 @@
-from common.data import LARa, LARaOptions, LARaClassLabelView, describeLARaLabels, ComposeTransforms
+from common.data import LARa, LARaOptions, LARaClassLabelView, describeLARaLabels, ComposeTransforms, LARaIMUView
 from torch.utils.data import DataLoader
 
 validation_data = LARa(
   window=300,
   stride=300,
-  transform=ComposeTransforms(LARaClassLabelView()),
+  transform=ComposeTransforms(LARaClassLabelView(), LARaIMUView(['N'])),
   opts=[LARaOptions.ALL_RUNS, LARaOptions.ALL_SUBJECTS]
   )
 

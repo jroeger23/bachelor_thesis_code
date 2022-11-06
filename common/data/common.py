@@ -154,8 +154,15 @@ def ensure_download_zip(url : str, root : str, dataset_name : str, zip_dirs : t.
       zf.extractall(path=dataset_direcoty)
   logger.info(f'Done!')
 
-class ComposeTransforms:
-  def __init__(self, *transforms : t.Tuple[t.Callable]):
+class Transform():
+  def __call__(self, batch : torch.Tensor, labels : torch.Tensor):
+    raise NotImplementedError()
+
+  def __str__(self) -> str:
+    raise NotImplementedError()
+
+class ComposeTransforms(Transform):
+  def __init__(self, *transforms : t.Tuple[Transform]):
     self.transforms = transforms
   
   def __call__(self, batch : torch.Tensor, labels : torch.Tensor):
@@ -163,6 +170,13 @@ class ComposeTransforms:
       batch, labels = t(batch, labels)
 
     return batch, labels
+
+  def __str__(self) -> str:
+    s = "ComposeTransforms: \n  [\n"
+    for t in self.transforms:
+      s += f'    -> {str(t)}\n'
+    
+    return s + "  ]"
 
 
 class SegmentedDataset(Dataset):

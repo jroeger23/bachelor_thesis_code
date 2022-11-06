@@ -101,14 +101,19 @@ def describeLARaLabels(labels) -> t.List[str]:
 
 class LARaLabelsView():
   def __init__(self, entries : t.List[str]) -> None:
+    self.entries = entries
     self.indices = [labels_view_indices[e] for e in entries]
 
   def __call__(self, batch : torch.Tensor, labels : torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
     labels = torch.atleast_2d(labels)
     return batch, labels[:, self.indices]
 
+  def __str__(self) -> str:
+    return f'LARaLabelsView({self.entries})'
+
 class LARaDataView():
   def __init__(self, entries : t.List[str]) -> None:
+    self.entries = entries
     self.indices = [data_view_indices[e] - 1 for e in entries] # adjust for trimmed time
 
   def __call__(self, batch : torch.Tensor, labels : torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
@@ -117,6 +122,9 @@ class LARaDataView():
 
   def entries() -> t.List[str]:
     return list(data_view_indices.keys())
+
+  def __str__(self) -> str:
+    return f'LARaDataView({self.entries})'
 
 class LARaClassLabelView():
   def __init__(self):
@@ -128,15 +136,20 @@ class LARaClassLabelView():
   def entries() -> t.List[str]:
     return list(labels_view_indices.keys())
 
+  def __str__(self) -> str:
+    return f'LARaClassLabelView'
+
 class LARaIMUView():
   def __init__(self, locations : t.List[str]):
     suffixes = ['_AccelerometerX', '_AccelerometerY', '_AccelerometerZ', '_GyroscopeX', '_GyroscopeY', '_GyroscopeZ']
-    entries = [ l + s for l,s in product(locations, suffixes) ]
-    self.view = LARaDataView(entries=entries)
+    self.entries = [ l + s for l,s in product(locations, suffixes) ]
+    self.view = LARaDataView(entries=self.entries)
 
   def __call__(self, batch : torch.Tensor, labels : torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
     return self.view(batch, labels)
 
+  def __str__(self) -> str:
+    return f'LARaIMUView({self.entries})'
 
 class LARaOptions(Enum):
   ALL_SUBJECTS = 100
@@ -202,6 +215,7 @@ class LARa(Dataset):
     logger.info(f'Loading LARa Dataset...')
     logger.info(f'  - Segmentation (w={window}, s={stride})')
     logger.info(f'  - Subsets {list(map(lambda o: o.name, opts))}')
+    logger.info(f'  - {str(transform)}')
 
     subjects = []
     if LARaOptions.SUBJECT07 in opts or LARaOptions.ALL_SUBJECTS in opts: subjects.append('S07')
