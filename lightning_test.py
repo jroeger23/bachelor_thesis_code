@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard.writer import SummaryWriter
 
 from common.data import mnist
-from common.metrics import classProbs, auroc, rocCurve, rocFigure
+from common.metrics import auroc, classProbs, rocCurve, rocFigure
 from common.tui import modeDialog
 
 logging.getLogger().setLevel(logging.INFO)
@@ -18,19 +18,20 @@ train_data, test_data, labels = mnist()
 
 
 class LightningModule(pl.LightningModule):
+
   def __init__(self) -> None:
     super().__init__()
     self.model = torch.nn.Sequential(
-      torch.nn.Conv2d(in_channels=1, out_channels=5, kernel_size=(5,5), padding=(2,2)),
-      torch.nn.MaxPool2d(kernel_size=(2,2), stride=2),
-      torch.nn.Conv2d(in_channels=5, out_channels=5, kernel_size=(5,5), padding=(2,2)),
-      torch.nn.MaxPool2d(kernel_size=(2,2), stride=2),
-      torch.nn.Flatten(),
-      torch.nn.Linear(in_features=7*7*5, out_features=49),
-      torch.nn.ReLU(),
-      torch.nn.Linear(in_features=49, out_features=10),
+        torch.nn.Conv2d(in_channels=1, out_channels=5, kernel_size=(5, 5), padding=(2, 2)),
+        torch.nn.MaxPool2d(kernel_size=(2, 2), stride=2),
+        torch.nn.Conv2d(in_channels=5, out_channels=5, kernel_size=(5, 5), padding=(2, 2)),
+        torch.nn.MaxPool2d(kernel_size=(2, 2), stride=2),
+        torch.nn.Flatten(),
+        torch.nn.Linear(in_features=7 * 7 * 5, out_features=49),
+        torch.nn.ReLU(),
+        torch.nn.Linear(in_features=49, out_features=10),
     )
-    self.example_input_array = torch.unsqueeze(test_data[0][0],dim=0)
+    self.example_input_array = torch.unsqueeze(test_data[0][0], dim=0)
 
   def forward(self, x):
     return self.model(x)
@@ -53,8 +54,11 @@ class LightningModule(pl.LightningModule):
     for c_ix, (c_label, c_prob) in enumerate(classProbs(y, probs)):
       self.log(f'validate-auroc/{c_ix}-{labels[c_ix]}', auroc(c_label, c_prob))
       if isinstance(self.logger, pl_loggers.TensorBoardLogger):
-        logger : SummaryWriter = self.logger.experiment
-        logger.add_pr_curve(f'validate-pr/{c_ix}-{labels[c_ix]}', c_label, c_prob, global_step=self.global_step)
+        logger: SummaryWriter = self.logger.experiment
+        logger.add_pr_curve(f'validate-pr/{c_ix}-{labels[c_ix]}',
+                            c_label,
+                            c_prob,
+                            global_step=self.global_step)
 
   def validation_step(self, batch, batch_ix):
     x, y = batch
@@ -80,7 +84,7 @@ class LightningModule(pl.LightningModule):
     for c_ix, (c_label, c_prob) in enumerate(classProbs(y, probs)):
       self.log(f'test-auroc/{c_ix}-{labels[c_ix]}', auroc(c_label, c_prob))
       if isinstance(self.logger, pl_loggers.TensorBoardLogger):
-        logger : SummaryWriter = self.logger.experiment
+        logger: SummaryWriter = self.logger.experiment
         logger.add_pr_curve(f'test-pr/{c_ix}-{labels[c_ix]}', c_label, c_prob)
         roc = rocFigure(c_label, c_prob, sample_points=40)
         logger.add_figure(tag=f'test-roc/{c_ix}-{labels[c_ix]}', figure=roc)
@@ -98,9 +102,9 @@ class LightningModule(pl.LightningModule):
     self.log('test/loss', loss.item())
     self.log('test/acc', acc)
 
-
   def configure_optimizers(self):
     return torch.optim.Adam(self.parameters())
+
 
 train_loader = DataLoader(dataset=train_data, batch_size=60, shuffle=True, num_workers=4)
 test_loader = DataLoader(dataset=test_data, batch_size=60, shuffle=False, num_workers=4)
@@ -108,11 +112,20 @@ test_loader = DataLoader(dataset=test_data, batch_size=60, shuffle=False, num_wo
 config = modeDialog()
 
 logger = pl_loggers.TensorBoardLogger(save_dir=config['log_dir'],
-                                      name=config['experiment'], version=config['version'],
+                                      name=config['experiment'],
+                                      version=config['version'],
                                       log_graph=True)
 
-es = pl_callbacks.EarlyStopping(monitor='validate/acc', mode='max', min_delta=0.00003, patience=4, strict=True)
-trainer = pl.Trainer(max_epochs=5, val_check_interval=100, limit_val_batches=0.4, callbacks=[es], logger=logger)
+es = pl_callbacks.EarlyStopping(monitor='validate/acc',
+                                mode='max',
+                                min_delta=0.00003,
+                                patience=4,
+                                strict=True)
+trainer = pl.Trainer(max_epochs=5,
+                     val_check_interval=100,
+                     limit_val_batches=0.4,
+                     callbacks=[es],
+                     logger=logger)
 
 if config['mode'] == 'train_new':
   m = LightningModule()

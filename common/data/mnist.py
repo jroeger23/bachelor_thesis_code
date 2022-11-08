@@ -1,5 +1,7 @@
-import torchvision
 import logging
+
+import torchvision
+
 
 def mnist():
   logger = logging.getLogger(__name__)
@@ -10,16 +12,16 @@ def mnist():
   test = torchvision.datasets.MNIST(root="data", train=True, download=True, transform=transform)
 
   labels = [
-    'zero',
-    'one',
-    'two',
-    'three',
-    'four',
-    'five',
-    'six',
-    'seven',
-    'eight',
-    'nine',
+      'zero',
+      'one',
+      'two',
+      'three',
+      'four',
+      'five',
+      'six',
+      'seven',
+      'eight',
+      'nine',
   ]
 
   logger.info('Using MNIST Dataset')
@@ -28,4 +30,3 @@ def mnist():
   logger.debug(f'  Labels = {labels}')
 
   return train, test, labels
-

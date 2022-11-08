@@ -9,81 +9,81 @@ import torch
 from si_prefix import si_format
 from torch.utils.data import ConcatDataset, Dataset
 
-from .common import SegmentedDataset, Transform, ensure_download_zip, load_cached_csv
+from .common import (SegmentedDataset, Transform, ensure_download_zip, load_cached_csv)
 
 logger = logging.getLogger(__name__)
 
 DOWNLOAD_URL = 'https://zenodo.org/record/3862782/files/IMU data.zip'
 SHA512_HEX = '3609fc9f610aec8aa01b6aa0c4c63927ccb309b68a89dab625e1673dd9724fe8da94a2c42466ee4976ebd96c72b9ef337cdc837fbc944b69172e76d7887ca868'
 
-
 labels_map = {
-  0 : 'standing',
-  1 : 'walking',
-  2 : 'cart',
-  3 : 'handling (upwards)',
-  4 : 'handling (centered)',
-  5 : 'handling (downwards)',
-  6 : 'synchronization',
-  7 : 'none',
+    0: 'standing',
+    1: 'walking',
+    2: 'cart',
+    3: 'handling (upwards)',
+    4: 'handling (centered)',
+    5: 'handling (downwards)',
+    6: 'synchronization',
+    7: 'none',
 }
 
 data_view_indices = {
-  'Time' : 0,
-  'LA_AccelerometerX' : 1,
-  'LA_AccelerometerY' : 2,
-  'LA_AccelerometerZ' : 3,
-  'LA_GyroscopeX' : 4,
-  'LA_GyroscopeY' : 5,
-  'LA_GyroscopeZ' : 6,
-  'LL_AccelerometerX' : 7,
-  'LL_AccelerometerY' : 8,
-  'LL_AccelerometerZ' : 9,
-  'LL_GyroscopeX' : 10,
-  'LL_GyroscopeY' : 11,
-  'LL_GyroscopeZ' : 12,
-  'N_AccelerometerX' : 13,
-  'N_AccelerometerY' : 14,
-  'N_AccelerometerZ' : 15,
-  'N_GyroscopeX' : 16,
-  'N_GyroscopeY' : 17,
-  'N_GyroscopeZ' : 18,
-  'RA_AccelerometerX' : 19,
-  'RA_AccelerometerY' : 20,
-  'RA_AccelerometerZ' : 21,
-  'RA_GyroscopeX' : 22,
-  'RA_GyroscopeY' : 23,
-  'RA_GyroscopeZ' : 24,
-  'RL_AccelerometerX' : 25,
-  'RL_AccelerometerY' : 26,
-  'RL_AccelerometerZ' : 27,
-  'RL_GyroscopeX' : 28,
-  'RL_GyroscopeY' : 29,
-  'RL_GyroscopeZ' : 30,
+    'Time': 0,
+    'LA_AccelerometerX': 1,
+    'LA_AccelerometerY': 2,
+    'LA_AccelerometerZ': 3,
+    'LA_GyroscopeX': 4,
+    'LA_GyroscopeY': 5,
+    'LA_GyroscopeZ': 6,
+    'LL_AccelerometerX': 7,
+    'LL_AccelerometerY': 8,
+    'LL_AccelerometerZ': 9,
+    'LL_GyroscopeX': 10,
+    'LL_GyroscopeY': 11,
+    'LL_GyroscopeZ': 12,
+    'N_AccelerometerX': 13,
+    'N_AccelerometerY': 14,
+    'N_AccelerometerZ': 15,
+    'N_GyroscopeX': 16,
+    'N_GyroscopeY': 17,
+    'N_GyroscopeZ': 18,
+    'RA_AccelerometerX': 19,
+    'RA_AccelerometerY': 20,
+    'RA_AccelerometerZ': 21,
+    'RA_GyroscopeX': 22,
+    'RA_GyroscopeY': 23,
+    'RA_GyroscopeZ': 24,
+    'RL_AccelerometerX': 25,
+    'RL_AccelerometerY': 26,
+    'RL_AccelerometerZ': 27,
+    'RL_GyroscopeX': 28,
+    'RL_GyroscopeY': 29,
+    'RL_GyroscopeZ': 30,
 }
 
 labels_view_indices = {
-  'Class' : 0,
-  'I-A_GaitCycle' : 2,
-  'I-B_Step' : 3,
-  'I-C_StandingStill' : 3,
-  'II-A_Upwards' : 4,
-  'II-B_Centred' : 5,
-  'II-C_Downwards' : 6,
-  'II-D_NoIntentionalMotion' : 7,
-  'II-E_TorsoRotation' : 8,
-  'III-A_Right' : 9,
-  'III-B_Left' : 10,
-  'III-C_NoArms' : 11,
-  'IV-A_BulkyUnit' : 12,
-  'IV-B_HandyUnit' : 13,
-  'IV-C_UtilityAux' : 14,
-  'IV-D_Cart' : 15,
-  'IV-E_Computer' : 16,
-  'IV-F_NoItem' : 17,
-  'V-A_None' : 18,
-  'VI-A_Error' : 19,
+    'Class': 0,
+    'I-A_GaitCycle': 2,
+    'I-B_Step': 3,
+    'I-C_StandingStill': 3,
+    'II-A_Upwards': 4,
+    'II-B_Centred': 5,
+    'II-C_Downwards': 6,
+    'II-D_NoIntentionalMotion': 7,
+    'II-E_TorsoRotation': 8,
+    'III-A_Right': 9,
+    'III-B_Left': 10,
+    'III-C_NoArms': 11,
+    'IV-A_BulkyUnit': 12,
+    'IV-B_HandyUnit': 13,
+    'IV-C_UtilityAux': 14,
+    'IV-D_Cart': 15,
+    'IV-E_Computer': 16,
+    'IV-F_NoItem': 17,
+    'V-A_None': 18,
+    'VI-A_Error': 19,
 }
+
 
 def describeLARaLabels(labels) -> t.List[str]:
   if type(labels) is torch.Tensor:
@@ -100,23 +100,28 @@ def describeLARaLabels(labels) -> t.List[str]:
 
 
 class LARaLabelsView(Transform):
-  def __init__(self, entries : t.List[str]) -> None:
+
+  def __init__(self, entries: t.List[str]) -> None:
     self.entries = entries
     self.indices = [labels_view_indices[e] for e in entries]
 
-  def __call__(self, batch : torch.Tensor, labels : torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
     labels = torch.atleast_2d(labels)
     return batch, labels[:, self.indices]
 
   def __str__(self) -> str:
     return f'LARaLabelsView({self.entries})'
 
-class LARaDataView(Transform):
-  def __init__(self, entries : t.List[str]) -> None:
-    self.entries = entries
-    self.indices = [data_view_indices[e] - 1 for e in entries] # adjust for trimmed time
 
-  def __call__(self, batch : torch.Tensor, labels : torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+class LARaDataView(Transform):
+
+  def __init__(self, entries: t.List[str]) -> None:
+    self.entries = entries
+    self.indices = [data_view_indices[e] - 1 for e in entries]  # adjust for trimmed time
+
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
     batch = torch.atleast_2d(batch)
     return batch[:, self.indices], labels
 
@@ -126,11 +131,14 @@ class LARaDataView(Transform):
   def __str__(self) -> str:
     return f'LARaDataView({self.entries})'
 
+
 class LARaClassLabelView(Transform):
+
   def __init__(self):
     self.view = LARaLabelsView(entries=['Class'])
 
-  def __call__(self, batch : torch.Tensor, labels : torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
     return self.view(batch, labels)
 
   def entries() -> t.List[str]:
@@ -139,18 +147,25 @@ class LARaClassLabelView(Transform):
   def __str__(self) -> str:
     return f'LARaClassLabelView'
 
+
 class LARaIMUView(Transform):
-  def __init__(self, locations : t.List[str]):
+
+  def __init__(self, locations: t.List[str]):
     self.locations = locations
-    suffixes = ['_AccelerometerX', '_AccelerometerY', '_AccelerometerZ', '_GyroscopeX', '_GyroscopeY', '_GyroscopeZ']
-    entries = [ l + s for l,s in product(locations, suffixes) ]
+    suffixes = [
+        '_AccelerometerX', '_AccelerometerY', '_AccelerometerZ', '_GyroscopeX', '_GyroscopeY',
+        '_GyroscopeZ'
+    ]
+    entries = [l + s for l, s in product(locations, suffixes)]
     self.view = LARaDataView(entries=entries)
 
-  def __call__(self, batch : torch.Tensor, labels : torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
     return self.view(batch, labels)
 
   def __str__(self) -> str:
     return f'LARaIMUView({self.locations})'
+
 
 class LARaOptions(Enum):
   ALL_SUBJECTS = 100
@@ -198,65 +213,106 @@ class LARaOptions(Enum):
   RUN30 = 330
 
 
-
 class LARa(Dataset):
-  def __init__(self, root : str = './data',
-               window : int = 24,
-               stride : int = 12,
-               transform = None,
-               download : bool = True,
-               opts : t.Iterable[LARaOptions] = []):
-    self.dataset_name = 'LARa'  
-    self.zip_dirs = [ 'IMU data/' ]
+
+  def __init__(self,
+               root: str = './data',
+               window: int = 24,
+               stride: int = 12,
+               transform=None,
+               download: bool = True,
+               opts: t.Iterable[LARaOptions] = []):
+    self.dataset_name = 'LARa'
+    self.zip_dirs = ['IMU data/']
     self.root = os.path.join(root, self.dataset_name, 'IMU data')
 
     if download:
-      ensure_download_zip(url=DOWNLOAD_URL, dataset_name=self.dataset_name, root=root, zip_dirs=self.zip_dirs, sha512_hex=SHA512_HEX)
-    
+      ensure_download_zip(url=DOWNLOAD_URL,
+                          dataset_name=self.dataset_name,
+                          root=root,
+                          zip_dirs=self.zip_dirs,
+                          sha512_hex=SHA512_HEX)
+
     logger.info(f'Loading LARa Dataset...')
     logger.info(f'  - Segmentation (w={window}, s={stride})')
     logger.info(f'  - Subsets {list(map(lambda o: o.name, opts))}')
     logger.info(f'  - {str(transform)}',)
 
     subjects = []
-    if LARaOptions.SUBJECT07 in opts or LARaOptions.ALL_SUBJECTS in opts: subjects.append('S07')
-    if LARaOptions.SUBJECT08 in opts or LARaOptions.ALL_SUBJECTS in opts: subjects.append('S08')
-    if LARaOptions.SUBJECT09 in opts or LARaOptions.ALL_SUBJECTS in opts: subjects.append('S09')
-    if LARaOptions.SUBJECT10 in opts or LARaOptions.ALL_SUBJECTS in opts: subjects.append('S10')
-    if LARaOptions.SUBJECT11 in opts or LARaOptions.ALL_SUBJECTS in opts: subjects.append('S11')
-    if LARaOptions.SUBJECT12 in opts or LARaOptions.ALL_SUBJECTS in opts: subjects.append('S12')
-    if LARaOptions.SUBJECT13 in opts or LARaOptions.ALL_SUBJECTS in opts: subjects.append('S13')
-    if LARaOptions.SUBJECT14 in opts or LARaOptions.ALL_SUBJECTS in opts: subjects.append('S14')
+    if LARaOptions.SUBJECT07 in opts or LARaOptions.ALL_SUBJECTS in opts:
+      subjects.append('S07')
+    if LARaOptions.SUBJECT08 in opts or LARaOptions.ALL_SUBJECTS in opts:
+      subjects.append('S08')
+    if LARaOptions.SUBJECT09 in opts or LARaOptions.ALL_SUBJECTS in opts:
+      subjects.append('S09')
+    if LARaOptions.SUBJECT10 in opts or LARaOptions.ALL_SUBJECTS in opts:
+      subjects.append('S10')
+    if LARaOptions.SUBJECT11 in opts or LARaOptions.ALL_SUBJECTS in opts:
+      subjects.append('S11')
+    if LARaOptions.SUBJECT12 in opts or LARaOptions.ALL_SUBJECTS in opts:
+      subjects.append('S12')
+    if LARaOptions.SUBJECT13 in opts or LARaOptions.ALL_SUBJECTS in opts:
+      subjects.append('S13')
+    if LARaOptions.SUBJECT14 in opts or LARaOptions.ALL_SUBJECTS in opts:
+      subjects.append('S14')
 
     runs = []
-    if LARaOptions.RUN01 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO1 in opts: runs.append('L01_SUBJECT_R01')
-    if LARaOptions.RUN02 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO1 in opts: runs.append('L01_SUBJECT_R02')
-    if LARaOptions.RUN03 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts: runs.append('L02_SUBJECT_R03')
-    if LARaOptions.RUN04 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts: runs.append('L02_SUBJECT_R04')
-    if LARaOptions.RUN05 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts: runs.append('L02_SUBJECT_R05')
-    if LARaOptions.RUN06 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts: runs.append('L02_SUBJECT_R06')
-    if LARaOptions.RUN07 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts: runs.append('L02_SUBJECT_R07')
-    if LARaOptions.RUN10 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts: runs.append('L02_SUBJECT_R10')
-    if LARaOptions.RUN11 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts: runs.append('L02_SUBJECT_R11')
-    if LARaOptions.RUN12 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts: runs.append('L02_SUBJECT_R12')
-    if LARaOptions.RUN13 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts: runs.append('L02_SUBJECT_R13')
-    if LARaOptions.RUN14 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts: runs.append('L02_SUBJECT_R14')
-    if LARaOptions.RUN15 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts: runs.append('L02_SUBJECT_R15')
-    if LARaOptions.RUN16 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts: runs.append('L02_SUBJECT_R16')
-    if LARaOptions.RUN17 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts: runs.append('L03_SUBJECT_R17')
-    if LARaOptions.RUN18 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts: runs.append('L03_SUBJECT_R18')
-    if LARaOptions.RUN19 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts: runs.append('L03_SUBJECT_R19')
-    if LARaOptions.RUN20 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts: runs.append('L03_SUBJECT_R20')
-    if LARaOptions.RUN21 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts: runs.append('L03_SUBJECT_R21')
-    if LARaOptions.RUN22 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts: runs.append('L03_SUBJECT_R22')
-    if LARaOptions.RUN23 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts: runs.append('L03_SUBJECT_R23')
-    if LARaOptions.RUN24 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts: runs.append('L03_SUBJECT_R24')
-    if LARaOptions.RUN25 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts: runs.append('L03_SUBJECT_R25')
-    if LARaOptions.RUN26 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts: runs.append('L03_SUBJECT_R26')
-    if LARaOptions.RUN27 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts: runs.append('L03_SUBJECT_R27')
-    if LARaOptions.RUN28 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts: runs.append('L03_SUBJECT_R28')
-    if LARaOptions.RUN29 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts: runs.append('L03_SUBJECT_R29')
-    if LARaOptions.RUN30 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts: runs.append('L03_SUBJECT_R30')
+    if LARaOptions.RUN01 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO1 in opts:
+      runs.append('L01_SUBJECT_R01')
+    if LARaOptions.RUN02 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO1 in opts:
+      runs.append('L01_SUBJECT_R02')
+    if LARaOptions.RUN03 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+      runs.append('L02_SUBJECT_R03')
+    if LARaOptions.RUN04 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+      runs.append('L02_SUBJECT_R04')
+    if LARaOptions.RUN05 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+      runs.append('L02_SUBJECT_R05')
+    if LARaOptions.RUN06 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+      runs.append('L02_SUBJECT_R06')
+    if LARaOptions.RUN07 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+      runs.append('L02_SUBJECT_R07')
+    if LARaOptions.RUN10 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+      runs.append('L02_SUBJECT_R10')
+    if LARaOptions.RUN11 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+      runs.append('L02_SUBJECT_R11')
+    if LARaOptions.RUN12 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+      runs.append('L02_SUBJECT_R12')
+    if LARaOptions.RUN13 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+      runs.append('L02_SUBJECT_R13')
+    if LARaOptions.RUN14 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+      runs.append('L02_SUBJECT_R14')
+    if LARaOptions.RUN15 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+      runs.append('L02_SUBJECT_R15')
+    if LARaOptions.RUN16 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+      runs.append('L02_SUBJECT_R16')
+    if LARaOptions.RUN17 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+      runs.append('L03_SUBJECT_R17')
+    if LARaOptions.RUN18 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+      runs.append('L03_SUBJECT_R18')
+    if LARaOptions.RUN19 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+      runs.append('L03_SUBJECT_R19')
+    if LARaOptions.RUN20 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+      runs.append('L03_SUBJECT_R20')
+    if LARaOptions.RUN21 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+      runs.append('L03_SUBJECT_R21')
+    if LARaOptions.RUN22 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+      runs.append('L03_SUBJECT_R22')
+    if LARaOptions.RUN23 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+      runs.append('L03_SUBJECT_R23')
+    if LARaOptions.RUN24 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+      runs.append('L03_SUBJECT_R24')
+    if LARaOptions.RUN25 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+      runs.append('L03_SUBJECT_R25')
+    if LARaOptions.RUN26 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+      runs.append('L03_SUBJECT_R26')
+    if LARaOptions.RUN27 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+      runs.append('L03_SUBJECT_R27')
+    if LARaOptions.RUN28 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+      runs.append('L03_SUBJECT_R28')
+    if LARaOptions.RUN29 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+      runs.append('L03_SUBJECT_R29')
+    if LARaOptions.RUN30 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+      runs.append('L03_SUBJECT_R30')
 
     memory = 0
     data = []
@@ -280,7 +336,9 @@ class LARa(Dataset):
 
     self.data = ConcatDataset(data)
 
-    logger.info(f'LARa Dataset loaded. {len(self)} segments with shape: {tuple(self.data[0][0].shape)}. Memory: {si_format(memory)}B')
+    logger.info(
+        f'LARa Dataset loaded. {len(self)} segments with shape: {tuple(self.data[0][0].shape)}. Memory: {si_format(memory)}B'
+    )
 
   def __getitem__(self, index):
     return self.data[index]

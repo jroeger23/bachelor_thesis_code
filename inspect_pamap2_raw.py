@@ -1,12 +1,12 @@
-from common.data import Opportunity, OpportunityOptions, OpportunityView, Pamap2, Pamap2Options, Pamap2IMUView
-import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 
-validation_data = Pamap2(
-  window=300,
-  stride=300,
-  opts=[Pamap2Options.ALL_SUBJECTS, Pamap2Options.OPTIONAL1]
-  )
+from common.data import (Opportunity, OpportunityOptions, OpportunityView, Pamap2, Pamap2IMUView,
+                         Pamap2Options)
+
+validation_data = Pamap2(window=300,
+                         stride=300,
+                         opts=[Pamap2Options.ALL_SUBJECTS, Pamap2Options.OPTIONAL1])
 
 segments1 = []
 segments2 = []
@@ -36,25 +36,24 @@ for a in ax_a:
   a.set_yticks([])
   a.set_xticks([])
 
-ax_a[0].plot(segment1[:,1])
-ax_a[1].plot(segment2[:,1])
-ax_a[2].plot(segment3[:,1])
+ax_a[0].plot(segment1[:, 1])
+ax_a[1].plot(segment2[:, 1])
+ax_a[2].plot(segment3[:, 1])
 fig_a.tight_layout()
 
-
-fig_b, ax_b = plt.subplots(9,1)
+fig_b, ax_b = plt.subplots(9, 1)
 colors = mpl.colormaps['Accent']
 for i, a in enumerate(ax_b):
   a.set_yticks([])
   a.set_xticks([])
-  a.plot(segment3[:,1+i], color=colors(i/9))
+  a.plot(segment3[:, 1 + i], color=colors(i / 9))
 fig_b.tight_layout()
 
-fig_c, ax_c = plt.subplots(9,1)
+fig_c, ax_c = plt.subplots(9, 1)
 for i, a in enumerate(ax_c):
   a.set_yticks([])
   a.set_xticks([])
-  a.plot(segment4[:,1+i], color=colors(i/9))
+  a.plot(segment4[:, 1 + i], color=colors(i / 9))
 fig_c.tight_layout()
 
 plt.show(block=True)

@@ -1,12 +1,12 @@
-from common.data import LARa, LARaOptions, LARaClassLabelView, describeLARaLabels, ComposeTransforms, LARaIMUView
 from torch.utils.data import DataLoader
 
-validation_data = LARa(
-  window=300,
-  stride=300,
-  transform=ComposeTransforms(LARaClassLabelView(), LARaIMUView(['N'])),
-  opts=[LARaOptions.ALL_RUNS, LARaOptions.ALL_SUBJECTS]
-  )
+from common.data import (ComposeTransforms, LARa, LARaClassLabelView, LARaIMUView, LARaOptions,
+                         describeLARaLabels)
+
+validation_data = LARa(window=300,
+                       stride=300,
+                       transform=ComposeTransforms(LARaClassLabelView(), LARaIMUView(['N'])),
+                       opts=[LARaOptions.ALL_RUNS, LARaOptions.ALL_SUBJECTS])
 
 loader = DataLoader(dataset=validation_data, batch_size=64, shuffle=True)
 

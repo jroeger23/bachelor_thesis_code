@@ -1,6 +1,7 @@
-.venv
-venv
-data
+/.venv
+/venv
+/data
+/.pytest_cache
 *.pyc
-lightning_logs
-logs
+/lightning_logs
+/logs

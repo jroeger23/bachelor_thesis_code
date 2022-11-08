@@ -1,40 +1,40 @@
-import re
-import inquirer
 import os
+import re
 import typing as t
 
+import inquirer
 
-def _autoExperimentName(inquiry_dict : t.Dict):
+
+def _autoExperimentName(inquiry_dict: t.Dict):
   path = inquiry_dict['log_dir']
 
-  m_times = [ (node.stat().st_mtime_ns, node.name)
-              for node in os.scandir(path=path)
-              if node.is_dir()
-            ] if os.path.exists(path=path) else []
+  m_times = [
+      (node.stat().st_mtime_ns, node.name) for node in os.scandir(path=path) if node.is_dir()
+  ] if os.path.exists(path=path) else []
 
   name = max(m_times)[1] if m_times != [] else 'experiment'
   name = inquirer.Text(name='name', message='Choose a new Experiment name', default=name)
   name = inquirer.prompt([name])['name']
 
   inquiry_dict['experiment'] = name
-  
 
-    
 
-def _autoVersion(inquiry_dict : t.Dict):
+def _autoVersion(inquiry_dict: t.Dict):
   path = os.path.join(inquiry_dict['log_dir'], inquiry_dict['experiment'])
 
-  numbers = [int(node.name.removeprefix(f'version_'))
-              for node in os.scandir(path=path)
-              if node.is_file() and re.match('version_[0-9]+')
-            ] if os.path.exists(path=path) else []
+  numbers = [
+      int(node.name.removeprefix(f'version_'))
+      for node in os.scandir(path=path)
+      if node.is_file() and re.match('version_[0-9]+')
+  ] if os.path.exists(path=path) else []
 
   new_number = max(numbers) + 1 if numbers != [] else 0
 
   inquiry_dict['version'] = f'version_{new_number}'
 
-def modeDialog(log_dir = 'logs'):
-  inquiry_dict = {'log_dir' : log_dir}
+
+def modeDialog(log_dir='logs'):
+  inquiry_dict = {'log_dir': log_dir}
 
   modes = ['quantize_checkpoint', 'test_checkpoint', 'train_new']
 
@@ -58,7 +58,7 @@ def modeDialog(log_dir = 'logs'):
   return inquiry_dict
 
 
-def experimentLoadDialog(inquiry_dict : t.Dict):
+def experimentLoadDialog(inquiry_dict: t.Dict):
   path = inquiry_dict['log_dir']
 
   experiments = [os.path.basename(node) for node in os.scandir(path=path) if node.is_dir()]
@@ -67,7 +67,8 @@ def experimentLoadDialog(inquiry_dict : t.Dict):
 
   inquiry_dict['experiment'] = experiment
 
-def versionLoadDialog(inquiry_dict : t.Dict):
+
+def versionLoadDialog(inquiry_dict: t.Dict):
   path = os.path.join(inquiry_dict['log_dir'], inquiry_dict['experiment'])
 
   versions = [os.path.basename(node) for node in os.scandir(path=path) if node.is_dir()]
@@ -76,10 +77,9 @@ def versionLoadDialog(inquiry_dict : t.Dict):
 
   inquiry_dict['version'] = version
 
-def checkpointLoadDialog(inquiry_dict : t.Dict):
-  path = os.path.join(inquiry_dict['log_dir'],
-                      inquiry_dict['experiment'],
-                      inquiry_dict['version'],
+
+def checkpointLoadDialog(inquiry_dict: t.Dict):
+  path = os.path.join(inquiry_dict['log_dir'], inquiry_dict['experiment'], inquiry_dict['version'],
                       "checkpoints")
 
   checkpoints = [os.path.basename(node) for node in os.scandir(path=path)]
