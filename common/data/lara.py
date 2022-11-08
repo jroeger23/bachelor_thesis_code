@@ -9,7 +9,7 @@ import torch
 from si_prefix import si_format
 from torch.utils.data import ConcatDataset, Dataset
 
-from .common import (SegmentedDataset, Transform, ensure_download_zip, load_cached_csv)
+from .common import (SegmentedDataset, Transform, View, ensure_download_zip, load_cached_csv)
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ def describeLARaLabels(labels) -> t.List[str]:
     return labels_map[int(labels)]
 
 
-class LARaLabelsView(Transform):
+class LARaLabelsView(View):
 
   def __init__(self, entries: t.List[str]) -> None:
     self.entries = entries
@@ -114,7 +114,7 @@ class LARaLabelsView(Transform):
     return f'LARaLabelsView({self.entries})'
 
 
-class LARaDataView(Transform):
+class LARaDataView(View):
 
   def __init__(self, entries: t.List[str]) -> None:
     self.entries = entries
@@ -132,7 +132,7 @@ class LARaDataView(Transform):
     return f'LARaDataView({self.entries})'
 
 
-class LARaClassLabelView(Transform):
+class LARaClassLabelView(View):
 
   def __init__(self):
     self.view = LARaLabelsView(entries=['Class'])
@@ -148,7 +148,7 @@ class LARaClassLabelView(Transform):
     return f'LARaClassLabelView'
 
 
-class LARaIMUView(Transform):
+class LARaIMUView(View):
 
   def __init__(self, locations: t.List[str]):
     self.locations = locations
@@ -219,12 +219,14 @@ class LARa(Dataset):
                root: str = './data',
                window: int = 24,
                stride: int = 12,
-               transform=None,
+               transform: Transform = None,
+               view: View = None,
                download: bool = True,
                opts: t.Iterable[LARaOptions] = []):
     self.dataset_name = 'LARa'
     self.zip_dirs = ['IMU data/']
     self.root = os.path.join(root, self.dataset_name, 'IMU data')
+    self.view = view
 
     if download:
       ensure_download_zip(url=DOWNLOAD_URL,
@@ -236,7 +238,8 @@ class LARa(Dataset):
     logger.info(f'Loading LARa Dataset...')
     logger.info(f'  - Segmentation (w={window}, s={stride})')
     logger.info(f'  - Subsets {list(map(lambda o: o.name, opts))}')
-    logger.info(f'  - {str(transform)}',)
+    logger.info(f'  - Transform {str(transform)}',)
+    logger.info(f'  - View {str(view)}',)
 
     subjects = []
     if LARaOptions.SUBJECT07 in opts or LARaOptions.ALL_SUBJECTS in opts:
@@ -331,7 +334,8 @@ class LARa(Dataset):
       _, labels = load_cached_csv(root=self.root, name=f'{name}_labels', logger=logger)
       memory += getsizeof(tensor.storage())
       memory += getsizeof(labels.storage())
-      tensor, labels = transform(tensor, labels)
+      if not transform is None:
+        tensor, labels = transform(tensor, labels)
       data.append(SegmentedDataset(tensor=tensor, labels=labels, window=window, stride=stride))
 
     self.data = ConcatDataset(data)
@@ -341,7 +345,7 @@ class LARa(Dataset):
     )
 
   def __getitem__(self, index):
-    return self.data[index]
+    return self.view(*self.data[index])
 
   def __len__(self) -> int:
     return len(self.data)

@@ -9,7 +9,7 @@ import torch
 from si_prefix import si_format
 from torch.utils.data import ConcatDataset, Dataset
 
-from .common import SegmentedDataset, Transform, ensure_download_zip, load_cached_dat
+from .common import (SegmentedDataset, Transform, View, ensure_download_zip, load_cached_dat)
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +124,7 @@ def describePamap2Labels(labels) -> t.List[str]:
     return labels_map[int(labels)]
 
 
-class Pamap2View(Transform):
+class Pamap2View(View):
 
   def __init__(self, entries: t.List[str]) -> None:
     self.entries = entries
@@ -142,7 +142,7 @@ class Pamap2View(Transform):
     return list(view_indices.keys())
 
 
-class Pamap2IMUView(Transform):
+class Pamap2IMUView(View):
 
   def __init__(self, locations: t.List[str], with_heart_rate: bool = True) -> None:
     self.locations = locations
@@ -168,7 +168,7 @@ class Pamap2IMUView(Transform):
     return ['imu_h', 'imu_c', 'imu_a']
 
 
-class Pamap2SplitIMUView(Transform):
+class Pamap2SplitIMUView(View):
 
   def __init__(self, locations: t.List[str]):
     self.locations = locations
@@ -210,13 +210,14 @@ class Pamap2(Dataset):
                root: str = './data',
                window: int = 24,
                stride: int = 12,
-               transform=None,
+               view: View = None,
+               transform: Transform = None,
                download: bool = True,
                opts: t.Iterable[Pamap2Options] = []):
     self.dataset_name = 'pamap2'
     self.zip_dirs = ['PAMAP2_Dataset/Protocol/', 'PAMAP2_Dataset/Optional/']
     self.root = os.path.join(root, self.dataset_name, 'PAMAP2_Dataset')
-    self.transform = None
+    self.view = view
 
     if download:
       ensure_download_zip(url=DOWNLOAD_URL,
@@ -228,6 +229,8 @@ class Pamap2(Dataset):
     logger.info(f'Loading Pamap2 Dataset...')
     logger.info(f'  - Segmentation (w={window}, s={stride})')
     logger.info(f'  - Subsets {list(map(lambda o: o.name, opts))}')
+    logger.info(f'  - Transform {str(transform)}')
+    logger.info(f'  - View {str(view)}')
 
     subjects = []
     if Pamap2Options.ALL_SUBJECTS in opts or Pamap2Options.FULL in opts or Pamap2Options.SUBJECT1 in opts:
@@ -282,7 +285,10 @@ class Pamap2(Dataset):
     )
 
   def __getitem__(self, index):
-    return self.data[index]
+    if self.view is None:
+      return self.data[index]
+    else:
+      return self.view(*self.data[index])
 
   def __len__(self) -> int:
     return len(self.data)

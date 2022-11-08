@@ -192,9 +192,19 @@ def ensure_download_zip(url: str,
   logger.info(f'Done!')
 
 
+class View():
+
+  def __call__(self, batch: torch.Tensor, labels: torch.Tensor) -> t.Any:
+    raise NotImplementedError()
+
+  def __str__(self) -> str:
+    raise NotImplementedError()
+
+
 class Transform():
 
-  def __call__(self, batch: torch.Tensor, labels: torch.Tensor):
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
     raise NotImplementedError()
 
   def __str__(self) -> str:
@@ -206,7 +216,8 @@ class ComposeTransforms(Transform):
   def __init__(self, *transforms: t.Tuple[Transform]):
     self.transforms = transforms
 
-  def __call__(self, batch: torch.Tensor, labels: torch.Tensor):
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
     for t in self.transforms:
       batch, labels = t(batch, labels)
 
@@ -218,6 +229,49 @@ class ComposeTransforms(Transform):
       s += f'\t  -> {str(t)}\n'
 
     return s + "\t]"
+
+
+class CombineViews(View):
+
+  def __init__(self, batch_view: View, labels_view: View):
+    self.batch_view = batch_view
+    self.labels_view = labels_view
+
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    return self.labels_view(*self.batch_view(batch, labels))
+
+  def __str__(self) -> str:
+    return f'CombineViews \n\t[\n\t  Batch:  {str(self.batch_view)}\n\t  Labels: {str(self.labels_view)}\n\t]'
+
+
+class NaNToConstTransform(Transform):
+
+  def __init__(self, batch_constant=0, label_constant=0):
+    self.batch_constant = batch_constant
+    self.label_constant = label_constant
+
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    return torch.nan_to_num(input=batch,
+                            nan=self.batch_constant), torch.nan_to_num(input=labels,
+                                                                       nan=self.label_constant)
+
+  def __str__(self) -> str:
+    return f'NaNToConst (batch_nan={self.batch_constant}, label_nan={self.label_constant})'
+
+
+class LabelDtypeTransform(Transform):
+
+  def __init__(self, dtype):
+    self.dtype = dtype
+
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    return batch, labels.type(dtype=self.dtype)
+
+  def __str__(self) -> str:
+    return f'LabelDtypeTransform {self.dtype}'
 
 
 class SegmentedDataset(Dataset):
