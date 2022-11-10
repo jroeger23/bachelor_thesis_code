@@ -121,8 +121,8 @@ class FuseModule(pl.LightningModule):
     Returns:
         torch.Tensor: 1D Tensor (batched)
     """
-    combined_features = torch.stack(feature_maps, dim=-1)
-    return self.flatten(combined_features)
+    flat_features = [self.flatten(features) for features in feature_maps]
+    return torch.column_stack(flat_features)
 
 
 class CNNIMU(pl.LightningModule):
