@@ -61,7 +61,7 @@ def load_cached_dat(root: str, name: str, dtype=torch.float32, logger=logger):
   return tensor
 
 
-CSV_SEP_REGEX = '\s*,\s*'
+CSV_SEP_REGEX = '\\s*,\\s*'
 
 
 def parse_csv_header(path: str) -> t.List[str]:
@@ -132,7 +132,7 @@ def sha512file(path: str) -> str:
     return sha512.hexdigest()
 
 
-def ensure_download_file(url: str, file: str, sha512_hex: str = None):
+def ensure_download_file(url: str, file: str, sha512_hex: t.Optional[str] = None):
   # check file
   if os.path.exists(file):
     if sha512_hex is None:
@@ -147,7 +147,7 @@ def ensure_download_file(url: str, file: str, sha512_hex: str = None):
   # Download file
   response = requests.get(url=url, verify=True, stream=True)
   chunk_size = 4096
-  length = int(response.headers.get('content-length'))
+  length = int(response.headers.get('content-length') or '0')
   sha512 = hashlib.sha512()
   with open(file, 'wb') as f:
     with tqdm.tqdm(desc=os.path.basename(file),
@@ -168,8 +168,8 @@ def ensure_download_file(url: str, file: str, sha512_hex: str = None):
 def ensure_download_zip(url: str,
                         root: str,
                         dataset_name: str,
-                        zip_dirs: t.List[int] = [],
-                        sha512_hex: str = None):
+                        zip_dirs: t.List[str] = [],
+                        sha512_hex: t.Optional[str] = None):
   dataset_direcoty = os.path.join(root, dataset_name)
   zip_path = dataset_direcoty + '.zip'
   if os.path.exists(dataset_direcoty):
@@ -213,7 +213,7 @@ class Transform():
 
 class ComposeTransforms(Transform):
 
-  def __init__(self, *transforms: t.Tuple[Transform]):
+  def __init__(self, transforms: t.List[Transform]):
     self.transforms = transforms
 
   def __call__(self, batch: torch.Tensor,

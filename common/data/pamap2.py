@@ -113,7 +113,7 @@ labels_map = {
 def describePamap2Labels(labels) -> t.List[str]:
   if type(labels) is torch.Tensor:
     if len(labels) == 1:
-      return labels_map[int(labels.item())]
+      return [labels_map[int(labels.item())]]
     elif labels.shape[1] == 1:
       return [labels_map[int(l.item())] for l in labels]
     else:
@@ -121,7 +121,7 @@ def describePamap2Labels(labels) -> t.List[str]:
   elif type(labels) is t.List:
     return [labels_map[int(l)] for l in labels]
   else:
-    return labels_map[int(labels)]
+    return [labels_map[int(labels)]]
 
 
 class Pamap2View(View):
@@ -138,7 +138,8 @@ class Pamap2View(View):
   def __str__(self) -> str:
     return f'Pamap2View({self.entries})'
 
-  def entries() -> t.List[str]:
+  @staticmethod
+  def allEntries() -> t.List[str]:
     return list(view_indices.keys())
 
 
@@ -164,7 +165,8 @@ class Pamap2IMUView(View):
   def __str__(self) -> str:
     return f'Pamap2IMUView({self.locations}, with_heart_rate={self.with_heart_rate})'
 
-  def locations() -> t.List[str]:
+  @staticmethod
+  def allLocations() -> t.List[str]:
     return ['imu_h', 'imu_c', 'imu_a']
 
 
@@ -180,8 +182,9 @@ class Pamap2SplitIMUView(View):
   def __str__(self) -> str:
     return f'Pamap2SplitView({self.locations})'
 
-  def locations() -> t.List[str]:
-    return Pamap2IMUView.locations()
+  @staticmethod
+  def allLocations() -> t.List[str]:
+    return list(Pamap2IMUView.allLocations())
 
 
 class Pamap2Options(Enum):
@@ -210,8 +213,8 @@ class Pamap2(Dataset):
                root: str = './data',
                window: int = 24,
                stride: int = 12,
-               view: View = None,
-               transform: Transform = None,
+               view: t.Optional[View] = None,
+               transform: t.Optional[Transform] = None,
                download: bool = True,
                opts: t.Iterable[Pamap2Options] = []):
     self.dataset_name = 'pamap2'

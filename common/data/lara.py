@@ -88,7 +88,7 @@ labels_view_indices = {
 def describeLARaLabels(labels) -> t.List[str]:
   if type(labels) is torch.Tensor:
     if len(labels) == 1:
-      return labels_map[int(labels.item())]
+      return [labels_map[int(labels.item())]]
     elif labels.shape[1] == 1:
       return [labels_map[int(l.item())] for l in labels]
     else:
@@ -96,7 +96,7 @@ def describeLARaLabels(labels) -> t.List[str]:
   elif type(labels) is t.List:
     return [labels_map[int(l)] for l in labels]
   else:
-    return labels_map[int(labels)]
+    return [labels_map[int(labels)]]
 
 
 class LARaLabelsView(View):
@@ -125,7 +125,8 @@ class LARaDataView(View):
     batch = torch.atleast_2d(batch)
     return batch[:, self.indices], labels
 
-  def entries() -> t.List[str]:
+  @staticmethod
+  def allEntries() -> t.List[str]:
     return list(data_view_indices.keys())
 
   def __str__(self) -> str:
@@ -141,7 +142,8 @@ class LARaClassLabelView(View):
                labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
     return self.view(batch, labels)
 
-  def entries() -> t.List[str]:
+  @staticmethod
+  def allEntries() -> t.List[str]:
     return list(labels_view_indices.keys())
 
   def __str__(self) -> str:
@@ -219,8 +221,8 @@ class LARa(Dataset):
                root: str = './data',
                window: int = 24,
                stride: int = 12,
-               transform: Transform = None,
-               view: View = None,
+               transform: t.Optional[Transform] = None,
+               view: t.Optional[View] = None,
                download: bool = True,
                opts: t.Iterable[LARaOptions] = []):
     self.dataset_name = 'LARa'
@@ -334,7 +336,7 @@ class LARa(Dataset):
       _, labels = load_cached_csv(root=self.root, name=f'{name}_labels', logger=logger)
       memory += getsizeof(tensor.storage())
       memory += getsizeof(labels.storage())
-      if not transform is None:
+      if transform is not None:
         tensor, labels = transform(tensor, labels)
       data.append(SegmentedDataset(tensor=tensor, labels=labels, window=window, stride=stride))
 
@@ -345,7 +347,7 @@ class LARa(Dataset):
     )
 
   def __getitem__(self, index):
-    return self.view(*self.data[index])
+    return self.view(*self.data[index]) if self.view is not None else self.data[index]
 
   def __len__(self) -> int:
     return len(self.data)

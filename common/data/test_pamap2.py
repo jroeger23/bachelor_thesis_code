@@ -4,7 +4,7 @@ from .pamap2 import Pamap2IMUView, Pamap2SplitIMUView, Pamap2View
 
 
 def test_pamap2ViewOrder():
-  view = Pamap2View(entries=Pamap2View.entries())
+  view = Pamap2View(entries=Pamap2View.allEntries())
 
   test = torch.Tensor(range(52 * 10)).reshape((10, 52))
 
@@ -14,10 +14,8 @@ def test_pamap2ViewOrder():
 
 
 def test_pamap2IMUViewOrder():
-  view1 = Pamap2IMUView(locations=Pamap2IMUView.locations(),
-                        with_heart_rate=True)
-  view2 = Pamap2IMUView(locations=Pamap2IMUView.locations(),
-                        with_heart_rate=False)
+  view1 = Pamap2IMUView(locations=Pamap2IMUView.allLocations(), with_heart_rate=True)
+  view2 = Pamap2IMUView(locations=Pamap2IMUView.allLocations(), with_heart_rate=False)
 
   test = torch.Tensor(range(52 * 10)).reshape((10, 52))
 
@@ -29,7 +27,7 @@ def test_pamap2IMUViewOrder():
 
 
 def test_pamap2SplitIMUViewOrder():
-  view = Pamap2SplitIMUView(locations=Pamap2SplitIMUView.locations())
+  view = Pamap2SplitIMUView(locations=Pamap2SplitIMUView.allLocations())
 
   test = torch.Tensor(range(52 * 10)).reshape((10, 52))
 

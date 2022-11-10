@@ -239,6 +239,7 @@ class OpportunityView():
     batch = torch.atleast_2d(batch)
     return batch[:, self.indices]
 
+  @staticmethod
   def describeLabels(labels: torch.Tensor) -> t.List[str]:
     ret = []
     for l in labels:
@@ -246,8 +247,9 @@ class OpportunityView():
 
     return ret
 
-  def getEntries() -> t.List[str]:
-    return view_indices.keys()
+  @staticmethod
+  def allEntries() -> t.List[str]:
+    return list(view_indices.keys())
 
 
 class OpportunityOptions(Enum):
