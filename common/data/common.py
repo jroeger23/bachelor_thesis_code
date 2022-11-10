@@ -192,6 +192,23 @@ def ensure_download_zip(url: str,
   logger.info(f'Done!')
 
 
+def describeLabels(labels_map: t.Mapping[int, str],
+                   labels: t.Union[torch.Tensor, int, t.List[int]]) -> t.Union[str, t.List[str]]:
+  if type(labels) is torch.Tensor:
+    if len(labels) == 1:
+      return labels_map[int(labels.item())]
+    elif labels.shape[1] == 1:
+      return [labels_map[int(l.item())] for l in labels]
+    else:
+      raise ValueError('Cannot describe multi dimensional labels')
+  elif type(labels) is t.List:
+    return [labels_map[int(l)] for l in labels]
+  elif type(labels) is int:
+    return labels_map[labels]
+  else:
+    raise TypeError(f'Requires tensor, int or List[int] not {type(labels)}')
+
+
 class View():
 
   def __call__(self, batch: torch.Tensor, labels: torch.Tensor) -> t.Any:

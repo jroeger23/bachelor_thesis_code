@@ -9,7 +9,8 @@ import torch
 from si_prefix import si_format
 from torch.utils.data import ConcatDataset, Dataset
 
-from .common import (SegmentedDataset, Transform, View, ensure_download_zip, load_cached_dat)
+from .common import (SegmentedDataset, Transform, View, describeLabels, ensure_download_zip,
+                     load_cached_dat)
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,15 @@ DOWNLOAD_URL = 'https://archive.ics.uci.edu/ml/machine-learning-databases/00231/
 SHA512_HEX = '14e96ccbc985abab0df796a09521506001eee02cf43e85fdc3dcadfca6ecd3f7b457daf5ce35a3b63251f746619b036d18582a7cee35505501a526af1bb397fd'
 
 
-def split_data_record(raw: torch.Tensor):
+def split_data_record(raw: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+  """Split a pamap2 data record into timestamp, label and sensor data
+
+  Args:
+      raw (torch.Tensor): the raw pamap2 tensor
+
+  Returns:
+      t.Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: timestamp, label, tensor
+  """
   timestamp = raw[:, 0]
   label = raw[:, 1]
   tensor = raw[:, 2:]
@@ -110,28 +119,44 @@ labels_map = {
 }
 
 
-def describePamap2Labels(labels) -> t.List[str]:
-  if type(labels) is torch.Tensor:
-    if len(labels) == 1:
-      return [labels_map[int(labels.item())]]
-    elif labels.shape[1] == 1:
-      return [labels_map[int(l.item())] for l in labels]
-    else:
-      raise ValueError('Cannot describe multi dimensional labels')
-  elif type(labels) is t.List:
-    return [labels_map[int(l)] for l in labels]
-  else:
-    return [labels_map[int(labels)]]
+def describePamap2Labels(
+    labels: t.Union[torch.Tensor, int, t.List[int]]) -> t.Union[str, t.List[str]]:
+  """Returns a list of label names for a collection if label indices
+
+  Args:
+      labels (t.Union[torch.Tensor, int, t.List[int]]): the collection of label indices
+
+  Returns:
+      t.Union[str, t.List[str]]: collection of label strings
+  """
+  return describeLabels(labels_map, labels)
 
 
 class Pamap2View(View):
+  """A generic Pamap2 data view
+  """
 
   def __init__(self, entries: t.List[str]) -> None:
+    """Create a Pamap2View for ordering/filtering the data chunks as in entries
+
+    Args:
+        entries (t.List[str]): the list of data column names to view
+    """
     self.entries = entries
     self.indices = [view_indices[e] for e in entries]
 
   def __call__(self, batch: torch.Tensor,
                labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    """Apply the view to a batch with labels
+
+    Args:
+        batch (torch.Tensor): the batch to view
+        labels (torch.Tensor): the labels to view
+
+    Returns:
+        t.Tuple[torch.Tensor, torch.Tensor]: all batch entries ordered by the entries parameter,
+                                             unchanged labels
+    """
     batch = torch.atleast_2d(batch)
     return batch[:, self.indices], labels
 
@@ -140,12 +165,25 @@ class Pamap2View(View):
 
   @staticmethod
   def allEntries() -> t.List[str]:
+    """Get the list of all possible entries values
+
+    Returns:
+        t.List[str]: all values
+    """
     return list(view_indices.keys())
 
 
 class Pamap2IMUView(View):
+  """A Pamap2View for IMU-Sensor collections at a given location
+  """
 
   def __init__(self, locations: t.List[str], with_heart_rate: bool = True) -> None:
+    """Create a new Pamap2IMUView
+
+    Args:
+        locations (t.List[str]): the list of locations (defining the view order)
+        with_heart_rate (bool, optional): Output the heatrate as the first sensor collection. Defaults to True.
+    """
     self.locations = locations
     self.with_heart_rate = with_heart_rate
     suffixes = [
@@ -160,6 +198,15 @@ class Pamap2IMUView(View):
 
   def __call__(self, batch: torch.Tensor,
                labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    """Apply the view to a batch with labels
+
+    Args:
+        batch (torch.Tensor): the batch to view
+        labels (torch.Tensor): the labels to view
+
+    Returns:
+        t.Tuple[torch.Tensor, torch.Tensor]: [heart_rate, locations-imu-data], labels
+    """
     return self.view(batch, labels)
 
   def __str__(self) -> str:
@@ -167,23 +214,50 @@ class Pamap2IMUView(View):
 
   @staticmethod
   def allLocations() -> t.List[str]:
+    """Get a list of all valid locations
+    """
     return ['imu_h', 'imu_c', 'imu_a']
 
 
 class Pamap2SplitIMUView(View):
+  """A Pamap2IMUView to split a imu data tensor into a list of tensors for each imu/heart_rate
+  """
 
-  def __init__(self, locations: t.List[str]):
+  def __init__(self, locations: t.List[str], with_heart_rate: bool = True):
+    """The locations to include in the list (in order)
+
+    Args:
+        locations (t.List[str]): The locations to include in the list (in order)
+        with_heart_rate (bool, optional): Use the heart_rate as the first list entry. Defaults to True.
+    """
     self.locations = locations
-    self.views = [Pamap2IMUView(locations=[l], with_heart_rate=False) for l in locations]
+    self.with_heart_rate = with_heart_rate
+    self.views = [Pamap2IMUView(locations=[], with_heart_rate=True)]
+    self.views.extend([Pamap2IMUView(locations=[l], with_heart_rate=False) for l in locations])
 
-  def __call__(self, batch: torch.Tensor, labels: torch.Tensor):
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[t.List[torch.Tensor], torch.Tensor]:
+    """Apply the view
+
+    Args:
+        batch (torch.Tensor): the batch to view
+        labels (torch.Tensor): the labels to view
+
+    Returns:
+        _type_: 
+    """
     return [v(batch, torch.Tensor())[0] for v in self.views], labels
 
   def __str__(self) -> str:
-    return f'Pamap2SplitView({self.locations})'
+    return f'Pamap2SplitIMUView({self.locations}, with_heart_rate={self.with_heart_rate})'
 
   @staticmethod
   def allLocations() -> t.List[str]:
+    """Return all valid locations
+
+    Returns:
+        t.List[str]: valid locations
+    """
     return list(Pamap2IMUView.allLocations())
 
 
