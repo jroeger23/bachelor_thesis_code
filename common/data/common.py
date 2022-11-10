@@ -507,6 +507,44 @@ class LabelDtypeTransform(Transform):
     return f'LabelDtypeTransform {self.dtype}'
 
 
+class ResampleTransform(Transform):
+  """A transformation, which is resampling batches and labels. Meant to used for not yet segmented data
+  """
+
+  def __init__(self, freq_in: int, freq_out: int):
+    """Set Resampling parameters
+
+    Args:
+        freq_in (int): input frequency
+        freq_out (int): output frequency
+    """
+    self.freq_in = freq_in
+    self.freq_out = freq_out
+
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    """Apply re-sampling to a sequence of data
+
+    Args:
+        batch (torch.Tensor): the sequence of datapoints (N x D)
+        labels (torch.Tensor): the sequence of labels (N x L)
+
+    Returns:
+        t.Tuple[torch.Tensor, torch.Tensor]: resampled batch (N' x D), resampled labels (N' x L)
+    """
+    ratio = self.freq_out / self.freq_in
+    fb = tuple([ratio] + [1 for _ in range(batch.ndim - 1)])
+    fl = tuple([ratio] + [1 for _ in range(labels.ndim - 1)])
+    batch = torch.nn.functional.interpolate(input=batch.unsqueeze(0).unsqueeze(0), scale_factor=fb)
+    labels = torch.nn.functional.interpolate(input=labels.unsqueeze(0).unsqueeze(0),
+                                             scale_factor=fl)
+
+    return batch.squeeze(), labels.squeeze()
+
+  def __str__(self) -> str:
+    return f'DownsampleTransform (f_in={self.freq_in}, f_out={self.freq_out})'
+
+
 class SegmentedDataset(Dataset):
   """A Dataset wrapper that segments the underlying dataset
   """

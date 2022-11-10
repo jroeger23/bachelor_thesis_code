@@ -1,4 +1,4 @@
-from .common import ComposeTransforms, NaNToConstTransform, LabelDtypeTransform, CombineViews
+from .common import ComposeTransforms, NaNToConstTransform, LabelDtypeTransform, CombineViews, ResampleTransform
 from .lara import (LARa, LARaClassLabelView, LARaDataView, LARaIMUView, LARaLabelsView, LARaOptions,
                    describeLARaLabels)
 from .mnist import *
