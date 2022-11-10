@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard.writer import SummaryWriter
 
 from common.data import mnist
-from common.metrics import auroc, classProbs, rocCurve, rocFigure
+from common.metrics import auroc, toBinary, rocCurve, rocFigure
 from common.tui import modeDialog
 
 logging.getLogger().setLevel(logging.INFO)
@@ -51,7 +51,7 @@ class LightningModule(pl.LightningModule):
     probs = torch.vstack(self.val_probs)
     y = torch.cat(self.val_labels)
 
-    for c_ix, (c_label, c_prob) in enumerate(classProbs(y, probs)):
+    for c_ix, (c_label, c_prob) in enumerate(toBinary(y, probs)):
       self.log(f'validate-auroc/{c_ix}-{labels[c_ix]}', auroc(c_label, c_prob))
       if isinstance(self.logger, pl_loggers.TensorBoardLogger):
         logger: SummaryWriter = self.logger.experiment
@@ -81,7 +81,7 @@ class LightningModule(pl.LightningModule):
     probs = torch.vstack(self.test_probs)
     y = torch.cat(self.test_labels)
 
-    for c_ix, (c_label, c_prob) in enumerate(classProbs(y, probs)):
+    for c_ix, (c_label, c_prob) in enumerate(toBinary(y, probs)):
       self.log(f'test-auroc/{c_ix}-{labels[c_ix]}', auroc(c_label, c_prob))
       if isinstance(self.logger, pl_loggers.TensorBoardLogger):
         logger: SummaryWriter = self.logger.experiment

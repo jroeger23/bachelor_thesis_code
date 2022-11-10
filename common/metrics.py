@@ -3,13 +3,13 @@ import torch
 import typing as t
 
 
-def classProbs(batch_labels: torch.Tensor,
-               batch_probs: torch.Tensor) -> t.List[t.Tuple[torch.Tensor, torch.Tensor]]:
+def toBinary(batch_labels: torch.Tensor,
+             batch_probs: torch.Tensor) -> t.List[t.Tuple[torch.Tensor, torch.Tensor]]:
   """Get a list of binary labels and probabilies. Each list entry is for one class
 
   Args:
       batch_labels (torch.Tensor): the labels of a batch (index or one-hot)
-      batch_probs (torch.Tensor): the batch probabilities for each class
+      batch_probs (torch.Tensor): the probabilities for each class (can be prediction indices)
 
   Raises:
       ValueError: invalid tensor shapes
@@ -26,9 +26,14 @@ def classProbs(batch_labels: torch.Tensor,
   else:
     raise ValueError(f'batch_labels is expected to be index or one-hot encoded')
 
-  class_probs = [(labels[:, c], batch_probs[:, c]) for c in range(n_classes)]
+  if batch_probs.ndim == 1:
+    probs = torch.eye(n_classes)[batch_probs]
+  elif batch_probs.ndim == 2:
+    probs = batch_probs
+  else:
+    raise ValueError(f'batch_probs is expected to be prediction-index or probability encoded')
 
-  return class_probs
+  return [(labels[:, c], probs[:, c]) for c in range(n_classes)]
 
 
 def auroc(binary_batch_labels: torch.Tensor,
@@ -118,3 +123,53 @@ def rocFigure(binary_batch_labels: torch.Tensor,
   ax.set_ylabel("True Positive Rate")
 
   return fig
+
+
+def getPR(binary_labels: torch.Tensor, binary_pred: torch.Tensor) -> t.Tuple[float, float]:
+  """Get the precision and recall value of a binary prediction
+
+  Args:
+      binary_labels (torch.Tensor): all binary labels
+      binary_pred (torch.Tensor): all binary predictions
+
+  Returns:
+      t.Tuple[torch.Tensor, torch.Tensor]: precision, recall
+  """
+  n_true_positive = torch.logical_and(binary_labels, binary_pred).sum().item()
+  n_positive_predictions = (binary_labels == 1).type(torch.float).sum().item()
+  n_positive_labels = (binary_labels == 1).type(torch.float).sum().item()
+
+  return (n_true_positive / n_positive_predictions), (n_true_positive / n_positive_labels)
+
+
+def f1Score(binary_labels: torch.Tensor, binary_pred: torch.Tensor) -> float:
+  """Calculate the F1 score of a binary prediction
+
+  Args:
+      binary_labels (torch.Tensor): all binary labels
+      binary_pred (torch.Tensor): all binary predictions
+
+  Returns:
+      float: F1 Score
+  """
+  p, r = getPR(binary_labels, binary_pred)
+
+  return 2 * p * r / (p + r)
+
+
+def wF1Score(labels: torch.Tensor, pred: torch.Tensor) -> float:
+  """Calculate the weighted f1Score (weights are relative occurances of each label)
+
+  Args:
+      labels (torch.Tensor): the labels (index or one-hot)
+      pred (torch.Tensor): the predictions (index or one-hot)
+
+  Returns:
+      float: weighted F1 Score
+  """
+  binary = toBinary(labels, pred)
+
+  f1_scores = [f1Score(l, p) for l, p in binary]
+  weights = [l.sum().item() for l, _ in binary]
+
+  return sum([s * w for s, w in zip(f1_scores, weights)]) / sum(weights)
