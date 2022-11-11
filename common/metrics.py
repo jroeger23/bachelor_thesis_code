@@ -9,7 +9,7 @@ def toBinary(batch_labels: torch.Tensor,
 
   Args:
       batch_labels (torch.Tensor): the labels of a batch (index or one-hot)
-      batch_probs (torch.Tensor): the probabilities for each class (can be prediction indices)
+      batch_probs (torch.Tensor): the probabilities for each class
 
   Raises:
       ValueError: invalid tensor shapes
@@ -26,12 +26,9 @@ def toBinary(batch_labels: torch.Tensor,
   else:
     raise ValueError(f'batch_labels is expected to be index or one-hot encoded')
 
-  if batch_probs.ndim == 1:
-    probs = torch.eye(n_classes)[batch_probs]
-  elif batch_probs.ndim == 2:
-    probs = batch_probs
-  else:
-    raise ValueError(f'batch_probs is expected to be prediction-index or probability encoded')
+  if batch_probs.ndim != 2:
+    raise ValueError(f'batch_probs is expected to be probability encoded')
+  probs = batch_probs
 
   return [(labels[:, c], probs[:, c]) for c in range(n_classes)]
 
@@ -135,9 +132,9 @@ def getPR(binary_labels: torch.Tensor, binary_pred: torch.Tensor) -> t.Tuple[flo
   Returns:
       t.Tuple[torch.Tensor, torch.Tensor]: precision, recall
   """
-  n_true_positive = torch.logical_and(binary_labels, binary_pred).sum().item()
-  n_positive_predictions = (binary_labels == 1).type(torch.float).sum().item()
-  n_positive_labels = (binary_labels == 1).type(torch.float).sum().item()
+  n_true_positive = torch.logical_and(binary_labels == binary_pred, binary_labels == 1).sum().item()
+  n_positive_predictions = (binary_pred == 1).type(torch.float).sum().item() + 1e-8
+  n_positive_labels = (binary_labels == 1).type(torch.float).sum().item() + 1e-8
 
   return (n_true_positive / n_positive_predictions), (n_true_positive / n_positive_labels)
 
@@ -154,7 +151,7 @@ def f1Score(binary_labels: torch.Tensor, binary_pred: torch.Tensor) -> float:
   """
   p, r = getPR(binary_labels, binary_pred)
 
-  return 2 * p * r / (p + r)
+  return 2 * p * r / (p + r + 1e-8)
 
 
 def wF1Score(labels: torch.Tensor, pred: torch.Tensor) -> float:
