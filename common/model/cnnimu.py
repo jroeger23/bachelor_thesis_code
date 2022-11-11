@@ -1,6 +1,7 @@
 import pytorch_lightning as pl
 import torch
 import typing as t
+from common.metrics import wF1Score
 
 
 class CNNIMUBlock(pl.LightningModule):
@@ -185,32 +186,63 @@ class CNNIMU(pl.LightningModule):
 
     return loss
 
+  def on_validation_epoch_start(self) -> None:
+    self.validation_labels = []
+    self.validation_probs = []
+
   def validation_step(self, batch: t.Tuple[t.List[torch.Tensor], torch.Tensor],
                       batch_ix) -> torch.Tensor:
     imu_x, labels = batch
 
     y_logits: torch.Tensor = self(imu_x)
     loss = torch.nn.functional.cross_entropy(input=y_logits, target=labels)
+    probs = torch.nn.functional.softmax(input=y_logits, dim=1)
 
-    hits = (y_logits.argmax(dim=1) == labels)
+    hits = (y_logits.argmax(dim=1) == labels).type(torch.float).sum()
 
-    self.log('validation/loss', loss)
-    self.log('validation/acc', hits / len(batch))
+    self.log('validation/loss', loss, prog_bar=True)
+    self.log('validation/acc', hits / len(y_logits))
+    self.validation_labels.append(labels)
+    self.validation_probs.append(probs)
 
     return loss
+
+  def on_validation_epoch_end(self) -> None:
+    validation_labels = torch.concat(self.validation_labels)
+    validation_probs = torch.row_stack(self.validation_probs)
+    n_classes = validation_probs.shape[1]
+
+    self.log('validation/wf1',
+             wF1Score(validation_labels,
+                      torch.eye(n_classes)[validation_probs.argmax(dim=1)]))
+
+  def on_test_epoch_start(self) -> None:
+    self.test_labels = []
+    self.test_probs = []
 
   def test_step(self, batch: t.Tuple[t.List[torch.Tensor], torch.Tensor], batch_ix) -> torch.Tensor:
     imu_x, labels = batch
 
     y_logits: torch.Tensor = self(imu_x)
+    probs = torch.nn.functional.softmax(input=y_logits, dim=1)
     loss = torch.nn.functional.cross_entropy(input=y_logits, target=labels)
 
-    hits = (y_logits.argmax(dim=1) == labels)
+    hits = (y_logits.argmax(dim=1) == labels).type(torch.float).sum()
 
     self.log('test/loss', loss)
-    self.log('test/acc', hits / len(batch))
+    self.log('test/acc', hits / len(y_logits))
+
+    self.test_probs.append(probs)
+    self.test_labels.append(labels)
 
     return loss
+
+  def on_test_epoch_end(self) -> None:
+    test_probs = torch.row_stack(self.test_probs)
+    test_labels = torch.concat(self.test_labels)
+    n_classes = test_probs.shape[1]
+
+    self.log('test/wf1', wF1Score(test_labels, torch.eye(n_classes)[test_probs.argmax(dim=1)]))
 
   def predict_step(self, batch: t.Tuple[t.List[torch.Tensor], torch.Tensor],
                    batch_ix) -> torch.Tensor:
