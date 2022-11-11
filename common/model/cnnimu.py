@@ -208,8 +208,8 @@ class CNNIMU(pl.LightningModule):
     return loss
 
   def on_validation_epoch_end(self) -> None:
-    validation_labels = torch.concat(self.validation_labels)
-    validation_probs = torch.row_stack(self.validation_probs)
+    validation_labels = torch.concat(self.validation_labels).detach().cpu()
+    validation_probs = torch.row_stack(self.validation_probs).detach().cpu()
     n_classes = validation_probs.shape[1]
 
     self.log('validation/wf1',
@@ -238,8 +238,8 @@ class CNNIMU(pl.LightningModule):
     return loss
 
   def on_test_epoch_end(self) -> None:
-    test_probs = torch.row_stack(self.test_probs)
-    test_labels = torch.concat(self.test_labels)
+    test_probs = torch.row_stack(self.test_probs).detach().cpu()
+    test_labels = torch.concat(self.test_labels).detach().cpu()
     n_classes = test_probs.shape[1]
 
     self.log('test/wf1', wF1Score(test_labels, torch.eye(n_classes)[test_probs.argmax(dim=1)]))
