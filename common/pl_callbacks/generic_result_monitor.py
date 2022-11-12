@@ -27,36 +27,36 @@ class GenericResultMonitor(pl.Callback):
     self.metric = metric
 
   def on_validation_epoch_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
-    pl_module.__dict__['validation_probs'] = []
-    pl_module.__dict__['validation_labels'] = []
+    setattr(pl_module, 'validation_probs', [])
+    setattr(pl_module, 'validation_labels', [])
 
   def on_validation_epoch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
     if self.on_validation is None:
       return
 
     try:
-      probs = pl_module.__dict__['validation_probs']
-      labels = pl_module.__dict__['validation_labels']
-    except KeyError as e:
-      msg = f'pl_module is expected to have validation_probs and validation_labels members set.({e})'
+      probs = getattr(pl_module, 'validation_probs')
+      labels = getattr(pl_module, 'validation_labels')
+    except AttributeError as e:
+      msg = f'pl_module is expected to have validation_probs and validation_labels attributes set.({e})'
       logger.error(msg)
       raise MisconfigurationError(msg)
 
     pl_module.log(self.on_validation, self.metric(probs, labels))
 
   def on_test_epoch_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
-    pl_module.__dict__['test_probs'] = []
-    pl_module.__dict__['test_labels'] = []
+    setattr(pl_module, 'test_probs', [])
+    setattr(pl_module, 'test_labels', [])
 
   def on_test_epoch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule) -> None:
     if self.on_test is None:
       return
 
     try:
-      probs = pl_module.__dict__['test_probs']
-      labels = pl_module.__dict__['test_labels']
+      probs = getattr(pl_module, 'test_probs')
+      labels = getattr(pl_module, 'test_labels')
     except KeyError as e:
-      msg = f'pl_module is expected to have test_probs and test_labels members set.({e})'
+      msg = f'pl_module is expected to have test_probs and test_labels attributes set.({e})'
       logger.error(msg)
       raise MisconfigurationError(msg)
 
