@@ -1,7 +1,9 @@
 import pytorch_lightning as pl
 import torch
 import typing as t
-from common.metrics import wF1Score
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class CNNIMUBlock(pl.LightningModule):
@@ -160,6 +162,11 @@ class CNNIMU(pl.LightningModule):
         torch.nn.Linear(in_features=fc_width, out_features=fc_width),
         torch.nn.Linear(in_features=fc_width, out_features=n_classes),
     )
+
+    logger.info(f'Set up CNNIMU for {n_classes} classes with convolution setup:')
+    for ix, (i_d, (o_t, o_d)) in enumerate(zip(imu_sizes, pipe_output_shapes)):
+      logger.info(
+          f'  - IMU{ix} (T={sample_length}, D={i_d}) -> {n_blocks} blocks -> (T={o_t}, D={o_d})')
 
   def forward(self, imu_x: t.List[torch.Tensor]) -> torch.Tensor:
     """Forward pass a list of IMU data batches
