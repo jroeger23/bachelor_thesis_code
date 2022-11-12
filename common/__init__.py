@@ -1,5 +1,4 @@
 import logging
-import sys
 
 # Setup global logging
 
