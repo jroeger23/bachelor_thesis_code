@@ -108,7 +108,7 @@ class LARaLabelsView(View):
   def __call__(self, batch: torch.Tensor,
                labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
     labels = torch.atleast_2d(labels)
-    return batch, labels[:, self.indices]
+    return batch, labels[:, self.indices].squeeze()
 
   def __str__(self) -> str:
     return f'LARaLabelsView({self.entries})'
@@ -165,8 +165,49 @@ class LARaIMUView(View):
                labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
     return self.view(batch, labels)
 
+  @staticmethod
+  def allLocations() -> t.List[str]:
+    return ['LA', 'LL', 'N', 'RA', 'RL']
+
   def __str__(self) -> str:
     return f'LARaIMUView({self.locations})'
+
+
+class LARaSplitIMUView(View):
+
+  def __init__(self, locations: t.List[str]):
+    """Create a new LARa split IMU view
+
+    Args:
+        locations (t.List[str]): a list of locations to include in the view output
+    """
+    self.locations = locations
+    self.views = [LARaIMUView(locations=[l]) for l in locations]
+
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[t.List[torch.Tensor], torch.Tensor]:
+    """Apply the view
+
+    Args:
+        batch (torch.Tensor): the batch to view
+        labels (torch.Tensor): the labels to view
+
+    Returns:
+        _type_: 
+    """
+    return [v(batch, torch.Tensor())[0] for v in self.views], labels
+
+  def __str__(self) -> str:
+    return f'LARaSplitIMUView({self.locations})'
+
+  @staticmethod
+  def allLocations() -> t.List[str]:
+    """Return all valid locations
+
+    Returns:
+        t.List[str]: valid locations
+    """
+    return LARaIMUView.allLocations()
 
 
 class LARaOptions(Enum):
@@ -336,7 +377,7 @@ class LARa(Dataset):
       _, labels = load_cached_csv(root=self.root, name=f'{name}_labels', logger=logger)
       memory += getsizeof(tensor.storage())
       memory += getsizeof(labels.storage())
-      if transform is not None:
+      if not transform is None:
         tensor, labels = transform(tensor, labels)
       data.append(SegmentedDataset(tensor=tensor, labels=labels, window=window, stride=stride))
 
