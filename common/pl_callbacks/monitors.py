@@ -28,12 +28,18 @@ def getAcc(probs: t.List[torch.Tensor], labels: t.List[torch.Tensor]) -> float:
 
 
 class MonitorWF1(GenericResultMonitor):
-  """Monitor the weghted F1 score
+  """Monitor the weighted F1 score
   """
 
   def __init__(self,
                on_validation: t.Optional[str] = "validation/wf1",
                on_test: t.Optional[str] = "test/wf1"):
+    """Weighted F1 monitor for test/val 
+
+    Args:
+        on_validation (t.Optional[str], optional): validation metric log name. Defaults to "validation/wf1".
+        on_test (t.Optional[str], optional): test metric log name. Defaults to "test/wf1".
+    """
 
     super().__init__(on_validation=on_validation, on_test=on_test, metric=getWF1)
 
@@ -45,5 +51,11 @@ class MonitorAcc(GenericResultMonitor):
   def __init__(self,
                on_validation: t.Optional[str] = "validation/acc",
                on_test: t.Optional[str] = "test/acc"):
+    """Accuracy monitor for test/val 
+
+    Args:
+        on_validation (t.Optional[str], optional): validation metric log name. Defaults to "validation/wf1".
+        on_test (t.Optional[str], optional): test metric log name. Defaults to "test/wf1".
+    """
 
     super().__init__(on_validation=on_validation, on_test=on_test, metric=getAcc)

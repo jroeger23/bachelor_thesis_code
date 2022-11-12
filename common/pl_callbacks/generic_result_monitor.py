@@ -15,11 +15,13 @@ class GenericResultMonitor(pl.Callback):
 
   def __init__(self, on_validation: t.Optional[str], on_test: t.Optional[str],
                metric: t.Callable[[t.List[torch.Tensor], t.List[torch.Tensor]], float]):
-    """Create new GenericResultMonitor
+    """A generic result monitor.
+    It expects to find "validation_probs", "validation_labels", "test_probs" and "test_labels" members
+    in pl_module, depending on the configuration.
 
     Args:
-        on_validation (t.Optional[str]): the log name for the validation metric (None means don't validation metric)
-        on_test (t.Optional[str]): the log name for the test metric (None means don't test metric)
+        on_validation (t.Optional[str]): the log name for the validation metric value (None means don't use metric on validation)
+        on_test (t.Optional[str]): the log name for the test metric value (None means don't test use metric on test)
         metric (t.Callable[[t.List[torch.Tensor], t.List[torch.Tensor]], float]): the metric to use
     """
     self.on_validation = on_validation
