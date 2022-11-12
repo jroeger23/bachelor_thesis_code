@@ -1,6 +1,7 @@
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning.callbacks import (DeviceStatsMonitor, EarlyStopping, LearningRateMonitor)
+from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.profilers import AdvancedProfiler
 from torch.utils.data import DataLoader, random_split
 
@@ -70,7 +71,9 @@ def main() -> None:
                        ],
                        val_check_interval=1 / 5,
                        enable_checkpointing=True,
-                       profiler=AdvancedProfiler(dirpath=".", filename="perf_logs"))
+                       profiler=AdvancedProfiler(dirpath="logs/CNNIMU-Pamap2",
+                                                 filename="perf_logs"),
+                       logger=TensorBoardLogger(save_dir='logs', name='CNNIMU-Pamap2'))
   trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=validation_loader)
   trainer.test(model=model, dataloaders=test_loader)
 
