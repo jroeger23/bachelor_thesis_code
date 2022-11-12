@@ -186,10 +186,6 @@ class CNNIMU(pl.LightningModule):
 
     return loss
 
-  def on_validation_epoch_start(self) -> None:
-    self.validation_labels = []
-    self.validation_probs = []
-
   def validation_step(self, batch: t.Tuple[t.List[torch.Tensor], torch.Tensor],
                       batch_ix) -> torch.Tensor:
     imu_x, labels = batch
@@ -198,27 +194,14 @@ class CNNIMU(pl.LightningModule):
     loss = torch.nn.functional.cross_entropy(input=y_logits, target=labels)
     probs = torch.nn.functional.softmax(input=y_logits, dim=1)
 
-    hits = (y_logits.argmax(dim=1) == labels).type(torch.float).sum()
-
     self.log('validation/loss', loss, prog_bar=True)
-    self.log('validation/acc', hits / len(y_logits))
-    self.validation_labels.append(labels)
-    self.validation_probs.append(probs)
+
+    if hasattr(self, 'validation_labels') and isinstance(self.validation_labels, list):
+      self.validation_labels.append(labels)
+    if hasattr(self, 'validation_probs') and isinstance(self.validation_probs, list):
+      self.validation_probs.append(probs)
 
     return loss
-
-  def on_validation_epoch_end(self) -> None:
-    validation_labels = torch.concat(self.validation_labels).detach().cpu()
-    validation_probs = torch.row_stack(self.validation_probs).detach().cpu()
-    n_classes = validation_probs.shape[1]
-
-    self.log('validation/wf1',
-             wF1Score(validation_labels,
-                      torch.eye(n_classes)[validation_probs.argmax(dim=1)]))
-
-  def on_test_epoch_start(self) -> None:
-    self.test_labels = []
-    self.test_probs = []
 
   def test_step(self, batch: t.Tuple[t.List[torch.Tensor], torch.Tensor], batch_ix) -> torch.Tensor:
     imu_x, labels = batch
@@ -230,19 +213,13 @@ class CNNIMU(pl.LightningModule):
     hits = (y_logits.argmax(dim=1) == labels).type(torch.float).sum()
 
     self.log('test/loss', loss)
-    self.log('test/acc', hits / len(y_logits))
 
-    self.test_probs.append(probs)
-    self.test_labels.append(labels)
+    if hasattr(self, 'test_labels') and isinstance(self.test_labels, list):
+      self.test_labels.append(labels)
+    if hasattr(self, 'test_probs') and isinstance(self.test_probs, list):
+      self.test_probs.append(probs)
 
     return loss
-
-  def on_test_epoch_end(self) -> None:
-    test_probs = torch.row_stack(self.test_probs).detach().cpu()
-    test_labels = torch.concat(self.test_labels).detach().cpu()
-    n_classes = test_probs.shape[1]
-
-    self.log('test/wf1', wF1Score(test_labels, torch.eye(n_classes)[test_probs.argmax(dim=1)]))
 
   def predict_step(self, batch: t.Tuple[t.List[torch.Tensor], torch.Tensor],
                    batch_ix) -> torch.Tensor:

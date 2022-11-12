@@ -1,15 +1,18 @@
-from common.model import CNNIMU
-from common.data import Pamap2, Pamap2Options, Pamap2SplitIMUView, NaNToConstTransform, LabelDtypeTransform, ComposeTransforms, ResampleTransform
-from torch.utils.data import DataLoader, random_split
 import pytorch_lightning as pl
-import multiprocessing
 import torch
-from pytorch_lightning.callbacks import DeviceStatsMonitor, LearningRateMonitor, EarlyStopping
+from pytorch_lightning.callbacks import (DeviceStatsMonitor, EarlyStopping, LearningRateMonitor)
 from pytorch_lightning.profilers import AdvancedProfiler
+from torch.utils.data import DataLoader, random_split
+
+from common.data import (ComposeTransforms, LabelDtypeTransform, NaNToConstTransform, Pamap2,
+                         Pamap2Options, Pamap2SplitIMUView, ResampleTransform)
+from common.model import CNNIMU
+from common.pl_callbacks import MonitorWF1
+from common.pl_callbacks.monitors import MonitorAcc
 
 
 def main() -> None:
-  # Load datasets ####################################################################################
+  # Load datasets ##################################################################################
   view = Pamap2SplitIMUView(locations=Pamap2SplitIMUView.allLocations())
   train_data = Pamap2(opts=[
       Pamap2Options.SUBJECT1, Pamap2Options.SUBJECT2, Pamap2Options.SUBJECT3,
@@ -43,17 +46,17 @@ def main() -> None:
                      view=view,
                      download=True)
 
-  # Setup data loaders ###############################################################################
+  # Setup data loaders #############################################################################
   train_loader = DataLoader(dataset=train_data, batch_size=100, shuffle=True)
   validation_loader = DataLoader(dataset=validation_data, batch_size=100, shuffle=False)
   test_loader = DataLoader(dataset=test_data, batch_size=100, shuffle=False)
 
-  # Configure CNN-IMU Model ##########################################################################
+  # Configure CNN-IMU Model ########################################################################
   imu_sizes = [segment.shape[1] for segment in train_data[0][0]]
   model = CNNIMU(n_blocks=3, imu_sizes=imu_sizes, sample_length=100, n_classes=25)
 
-  # Training / Evaluation ############################################################################
-  trainer = pl.Trainer(max_epochs=10,
+  # Training / Evaluation ##########################################################################
+  trainer = pl.Trainer(max_epochs=3,
                        accelerator='auto',
                        callbacks=[
                            DeviceStatsMonitor(),
@@ -61,7 +64,9 @@ def main() -> None:
                            EarlyStopping(monitor='validation/loss',
                                          min_delta=0.001,
                                          patience=7,
-                                         mode='min')
+                                         mode='min'),
+                           MonitorWF1(),
+                           MonitorAcc()
                        ],
                        val_check_interval=1 / 5,
                        enable_checkpointing=True,
