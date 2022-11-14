@@ -26,11 +26,13 @@ class CNNIMUBlock(pl.LightningModule):
                                  kernel_size=(5, 1),
                                  stride=1,
                                  padding=(2, 0))
+    self.relu1 = torch.nn.ReLU()
     self.conv2 = torch.nn.Conv2d(in_channels=channels,
                                  out_channels=channels,
                                  kernel_size=(5, 1),
                                  stride=1,
                                  padding=(2, 0))
+    self.relu2 = torch.nn.ReLU()
     self.pool = torch.nn.MaxPool2d(kernel_size=(2, 1))
 
   def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -43,7 +45,9 @@ class CNNIMUBlock(pl.LightningModule):
         torch.Tensor: The output features (T//2 x D x C)
     """
     x = self.conv1(x)
+    x = self.relu1(x)
     x = self.conv2(x)
+    x = self.relu2(x)
     x = self.pool(x)
     return x
 
@@ -158,8 +162,10 @@ class CNNIMU(pl.LightningModule):
     self.fc = torch.nn.Sequential(
         torch.nn.Dropout(),
         torch.nn.Linear(in_features=fc_in, out_features=fc_width),
+        torch.nn.ReLU(),
         torch.nn.Dropout(),
         torch.nn.Linear(in_features=fc_width, out_features=fc_width),
+        torch.nn.ReLU(),
         torch.nn.Linear(in_features=fc_width, out_features=n_classes),
     )
 
