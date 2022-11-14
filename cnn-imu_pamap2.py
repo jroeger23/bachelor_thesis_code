@@ -14,24 +14,19 @@ from common.pl_components import ModelProfiler, MonitorAcc, MonitorWF1
 def main() -> None:
   # Load datasets ##################################################################################
   view = Pamap2SplitIMUView(locations=Pamap2SplitIMUView.allLocations())
-  train_data = Pamap2(opts=[Pamap2Options.ALL_SUBJECTS, Pamap2Options.ALL_OPTIONAL],
-                      window=100,
-                      stride=33,
-                      transform=ComposeTransforms([
-                          NaNToConstTransform(batch_constant=0, label_constant=0),
-                          ResampleTransform(freq_in=100, freq_out=30),
-                          LabelDtypeTransform(dtype=torch.int64)
-                      ]),
-                      view=Pamap2SplitIMUView(locations=Pamap2SplitIMUView.allLocations()),
-                      download=True)
+  data = Pamap2(opts=[Pamap2Options.ALL_SUBJECTS, Pamap2Options.ALL_OPTIONAL],
+                window=100,
+                stride=33,
+                transform=ComposeTransforms([
+                    NaNToConstTransform(batch_constant=0, label_constant=0),
+                    ResampleTransform(freq_in=100, freq_out=30),
+                    LabelDtypeTransform(dtype=torch.int64)
+                ]),
+                view=Pamap2SplitIMUView(locations=Pamap2SplitIMUView.allLocations()),
+                download=True)
 
   # randomly draw some training data as validation data
-  train_data, validation_data, test_data = random_split(dataset=train_data,
-                                                        lengths=[
-                                                            round(len(train_data) * 0.8),
-                                                            round(len(train_data) * 0.12),
-                                                            round(len(train_data) * 0.08)
-                                                        ])
+  train_data, validation_data, test_data = random_split(dataset=data, lengths=[0.8, 0.12, 0.08])
 
   # Setup data loaders #############################################################################
   train_loader = DataLoader(dataset=train_data, batch_size=100, shuffle=True)

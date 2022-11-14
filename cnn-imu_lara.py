@@ -2,7 +2,6 @@ import pytorch_lightning as pl
 import torch
 from pytorch_lightning import callbacks as pl_cb
 from pytorch_lightning import loggers as pl_log
-from pytorch_lightning import profilers as pl_prof
 from torch.utils.data import DataLoader, random_split
 
 from common.data import (CombineViews, ComposeTransforms, LabelDtypeTransform, LARa,
@@ -28,11 +27,7 @@ def main():
               ]),
               view=view)
 
-  train_data, validation_data, test_data = random_split(
-      dataset=data,
-      lengths=[round(len(data) * 0.80),
-               round(len(data) * 0.12),
-               round(len(data) * 0.08)])
+  train_data, validation_data, test_data = random_split(dataset=data, lengths=[0.8, 0.12, 0.08])
 
   # Setup data loaders #############################################################################
   train_loader = DataLoader(dataset=train_data, batch_size=100, shuffle=True)
@@ -41,13 +36,14 @@ def main():
 
   # Setup model ####################################################################################
   imu_sizes = [segment.shape[1] for segment in train_data[0][0]]
-  model = CNNIMU(n_blocks=2, imu_sizes=imu_sizes, sample_length=100, n_classes=8)
+  model = CNNIMU(n_blocks=3, imu_sizes=imu_sizes, sample_length=100, n_classes=8)
   pl_logger = pl_log.TensorBoardLogger(save_dir='logs', name='CNNIMU-LARa')
   trainer = pl.Trainer(max_epochs=15,
                        accelerator='auto',
                        callbacks=[
                            pl_cb.DeviceStatsMonitor(),
                            pl_cb.LearningRateMonitor(),
+                           pl_cb.ModelSummary(max_depth=2),
                            pl_cb.EarlyStopping(monitor='validation/loss',
                                                min_delta=0.001,
                                                patience=22,
