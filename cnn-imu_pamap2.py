@@ -8,19 +8,13 @@ from torch.utils.data import DataLoader, random_split
 from common.data import (ComposeTransforms, LabelDtypeTransform, NaNToConstTransform, Pamap2,
                          Pamap2Options, Pamap2SplitIMUView, ResampleTransform)
 from common.model import CNNIMU
-from common.pl_components import MonitorWF1
-from common.pl_components.monitors import MonitorAcc
+from common.pl_components import ModelProfiler, MonitorAcc, MonitorWF1
 
 
 def main() -> None:
   # Load datasets ##################################################################################
   view = Pamap2SplitIMUView(locations=Pamap2SplitIMUView.allLocations())
-  train_data = Pamap2(opts=[
-      Pamap2Options.SUBJECT1, Pamap2Options.SUBJECT2, Pamap2Options.SUBJECT3,
-      Pamap2Options.SUBJECT4, Pamap2Options.SUBJECT5, Pamap2Options.SUBJECT6,
-      Pamap2Options.OPTIONAL1, Pamap2Options.OPTIONAL5, Pamap2Options.OPTIONAL6,
-      Pamap2Options.OPTIONAL8, Pamap2Options.OPTIONAL9
-  ],
+  train_data = Pamap2(opts=[Pamap2Options.ALL_SUBJECTS, Pamap2Options.ALL_OPTIONAL],
                       window=100,
                       stride=33,
                       transform=ComposeTransforms([
@@ -32,20 +26,12 @@ def main() -> None:
                       download=True)
 
   # randomly draw some training data as validation data
-  train_data, validation_data = random_split(
-      dataset=train_data, lengths=[round(len(train_data) * 0.9),
-                                   round(len(train_data) * 0.1)])
-
-  test_data = Pamap2(opts=[Pamap2Options.SUBJECT7, Pamap2Options.SUBJECT8, Pamap2Options.SUBJECT9],
-                     window=100,
-                     stride=33,
-                     transform=ComposeTransforms([
-                         NaNToConstTransform(batch_constant=0, label_constant=0),
-                         ResampleTransform(freq_in=100, freq_out=30),
-                         LabelDtypeTransform(dtype=torch.int64)
-                     ]),
-                     view=view,
-                     download=True)
+  train_data, validation_data, test_data = random_split(dataset=train_data,
+                                                        lengths=[
+                                                            round(len(train_data) * 0.8),
+                                                            round(len(train_data) * 0.12),
+                                                            round(len(train_data) * 0.08)
+                                                        ])
 
   # Setup data loaders #############################################################################
   train_loader = DataLoader(dataset=train_data, batch_size=100, shuffle=True)
@@ -57,23 +43,23 @@ def main() -> None:
   model = CNNIMU(n_blocks=3, imu_sizes=imu_sizes, sample_length=100, n_classes=25)
 
   # Training / Evaluation ##########################################################################
-  trainer = pl.Trainer(max_epochs=3,
+  logger = TensorBoardLogger(save_dir='logs', name='CNNIMU-Pamap2')
+  trainer = pl.Trainer(max_epochs=15,
                        accelerator='auto',
                        callbacks=[
                            DeviceStatsMonitor(),
                            LearningRateMonitor(),
                            EarlyStopping(monitor='validation/loss',
                                          min_delta=0.001,
-                                         patience=7,
+                                         patience=22,
                                          mode='min'),
                            MonitorWF1(),
                            MonitorAcc()
                        ],
-                       val_check_interval=1 / 5,
+                       val_check_interval=1 / 10,
                        enable_checkpointing=True,
-                       profiler=AdvancedProfiler(dirpath="logs/CNNIMU-Pamap2",
-                                                 filename="perf_logs"),
-                       logger=TensorBoardLogger(save_dir='logs', name='CNNIMU-Pamap2'))
+                       profiler=ModelProfiler(dirpath=logger.log_dir, filename="perf_logs"),
+                       logger=logger)
   trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=validation_loader)
   trainer.test(model=model, dataloaders=test_loader)
 
