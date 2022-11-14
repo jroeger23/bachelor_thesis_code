@@ -1,12 +1,15 @@
-from common.data import LARa, LARaSplitIMUView, LabelDtypeTransform, ResampleTransform, ComposeTransforms, NaNToConstTransform, LARaOptions, CombineViews, LARaClassLabelView
-from common.model import CNNIMU
-import torch
-from torch.utils.data import DataLoader, random_split
 import pytorch_lightning as pl
-from pytorch_lightning import loggers as pl_log
+import torch
 from pytorch_lightning import callbacks as pl_cb
+from pytorch_lightning import loggers as pl_log
 from pytorch_lightning import profilers as pl_prof
-from common.pl_components import MonitorAcc, MonitorWF1, ModelProfiler
+from torch.utils.data import DataLoader, random_split
+
+from common.data import (CombineViews, ComposeTransforms, LabelDtypeTransform, LARa,
+                         LARaClassLabelView, LARaOptions, LARaSplitIMUView, NaNToConstTransform,
+                         ResampleTransform)
+from common.model import CNNIMU
+from common.pl_components import ModelProfiler, MonitorAcc, MonitorWF1
 
 
 def main():
@@ -40,7 +43,7 @@ def main():
   imu_sizes = [segment.shape[1] for segment in train_data[0][0]]
   model = CNNIMU(n_blocks=2, imu_sizes=imu_sizes, sample_length=100, n_classes=8)
   pl_logger = pl_log.TensorBoardLogger(save_dir='logs', name='CNNIMU-LARa')
-  trainer = pl.Trainer(max_epochs=3,
+  trainer = pl.Trainer(max_epochs=15,
                        accelerator='auto',
                        callbacks=[
                            pl_cb.DeviceStatsMonitor(),
