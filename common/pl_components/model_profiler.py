@@ -114,15 +114,23 @@ class ModelProfiler(pl_p.Profiler):
 
     fmt = '{value}{prefix}s'
 
+    def summaryQ(data: torch.Tensor, quartiles: torch.Tensor) -> str:
+      s = ""
+      for v, q in zip(data.quantile(q=quartiles), quartiles):
+        s += f'  - Q{q:.02f} = {si_format(v, 2, fmt)}\n'
+
+      return s
+
+    quantiles = torch.tensor([0.25, 0.5, 0.75])
     summary = f'\n{"-"*80}\nModelProfiler ({self.start_time})\n{"-"*20}\n'
     if len(self.train_times) != 0:
       summary += f'Total Train Time:         {si_format(train_times.sum(), 2, fmt)}\n'
       summary += f'Average Batch Train Time: {si_format(train_times.mean(), 2, fmt)}\n'
-      summary += f'Middle Batch Train Time:  {si_format(train_times.median(), 2, fmt)}\n'
+      summary += f'Train Batch Quantiles:\n{summaryQ(train_times, quantiles)}\n'
     if len(self.test_times) != 0:
       summary += f'Total Test Time:          {si_format(test_times.sum(), 2, fmt)}\n'
       summary += f'Average Batch Test Time:  {si_format(test_times.mean(), 2, fmt)}\n'
-      summary += f'Middle Batch Test Time:   {si_format(test_times.median(), 2, fmt)}\n'
+      summary += f'Test Batch Quantiles:\n{summaryQ(test_times, quantiles)}\n'
 
     return summary
 
