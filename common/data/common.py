@@ -281,13 +281,14 @@ def ensure_download_zip(url: str,
   logger.info(f'Done!')
 
 
-def describeLabels(labels_map: t.Mapping[int, str],
-                   labels: t.Union[torch.Tensor, int, t.List[int]]) -> t.Union[str, t.List[str]]:
+def describeLabels(
+    labels_map: t.Mapping[int, str], labels: t.Union[torch.Tensor, int,
+                                                     t.Iterable[int]]) -> t.Union[str, t.List[str]]:
   """Describe a collection of labels (to string)
 
   Args:
       labels_map (t.Mapping[int, str]): the label_ix to name mapping
-      labels (t.Union[torch.Tensor, int, t.List[int]]): the collection of labels (tensor must be one dimensional)
+      labels (t.Union[torch.Tensor, int, t.Iterable[int]]): the collection of labels (tensor must be one dimensional)
 
   Raises:
       ValueError: If labels is a multi dimensional tensor

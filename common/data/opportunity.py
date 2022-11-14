@@ -9,7 +9,9 @@ import torch
 from si_prefix import si_format
 from torch.utils.data import ConcatDataset, Dataset
 
-from .common import SegmentedDataset, ensure_download_zip, load_cached_dat
+from .common import SegmentedDataset, ensure_download_zip, load_cached_dat, Transform, View, describeLabels
+
+from functools import wraps
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +20,12 @@ SHA512_HEX = 'adf10dab0e44eb5a3c49d48f92acc8c1c14b48d143aecaa37398c9d7a8d728a2ff
 
 
 def parse_column_description_line(columns: t.MutableMapping[int, str], line: str):
+  """ Parse Opportunity description line
+
+  Args:
+      columns (t.MutableMapping[int, str]): the column mapping from index -> name to be written to
+      line (str): the line to parse
+  """
   if line.isspace():
     return
 
@@ -38,6 +46,14 @@ def parse_column_description_line(columns: t.MutableMapping[int, str], line: str
 
 
 def parse_columns_file(path: str) -> t.Mapping[int, str]:
+  """Parse a file of Opportunity description columns
+
+  Args:
+      path (str): file path
+
+  Returns:
+      t.Mapping[int, str]: the index to name mapping
+  """
   columns = {}
 
   with open(file=path, mode='r') as f:
@@ -127,6 +143,7 @@ view_indices = {
 }
 
 labels_map = {
+    0: '<none>',
     1: 'Stand',
     2: 'Walk',
     4: 'Sit',
@@ -227,6 +244,12 @@ labels_map = {
     105: 'HL_Activity Sandwich time',
 }
 
+@wraps(describeLabels)
+def describeOpportunityLabels(labels : t.Union[int, t.Iterable[int], torch.Tensor]) -> t.Union[str, t.List[str]]:
+  return describeLabels(labels_map=labels_map, labels=labels)
+
+def allOpportunityLabels() -> t.Mapping[int, str]:
+  return labels_map
 
 class OpportunityView():
 
@@ -238,14 +261,6 @@ class OpportunityView():
   def __call__(self, batch: torch.Tensor):
     batch = torch.atleast_2d(batch)
     return batch[:, self.indices]
-
-  @staticmethod
-  def describeLabels(labels: torch.Tensor) -> t.List[str]:
-    ret = []
-    for l in labels:
-      ret.append(labels_map[int(l.item())] if l != 0 else "<null>")
-
-    return ret
 
   @staticmethod
   def allEntries() -> t.List[str]:
@@ -273,14 +288,15 @@ class Opportunity(Dataset):
                root: str,
                window: int = 24,
                stride: int = 12,
-               transform=None,
+               transform: t.Optional[Transform] = None,
+               view: t.Optional[View] = None,
                download: bool = True,
                opts: t.Iterable[OpportunityOptions] = []):
 
     self.dataset_name = 'opportunity'
     self.zip_dir = 'OpportunityUCIDataset/dataset'
     self.root = os.path.join(root, self.dataset_name, self.zip_dir)
-    self.transform = None
+    self.view = view
 
     if download:
       ensure_download_zip(url=DOWNLOAD_URL,
@@ -292,6 +308,8 @@ class Opportunity(Dataset):
     logger.info(f'Loading Opportunity Dataset...')
     logger.info(f'  - Segmentation (w={window}, s={stride})')
     logger.info(f'  - Subsets {list(map(lambda o: o.name, opts))}')
+    logger.info(f'  - Transform: {str(transform)}')
+    logger.info(f'  - View: {str(view)}')
 
     self.columns = parse_columns_file(os.path.join(self.root, 'column_names.txt'))
 
@@ -325,6 +343,8 @@ class Opportunity(Dataset):
       raw = load_cached_dat(root=self.root, name=prefix + suffix, logger=logger)
       memory += getsizeof(raw.storage())
       _, tensor, labels = split_data_record(raw)
+      if transform is not None:
+        tensor, labels = transform(tensor, labels)
       data.append(SegmentedDataset(tensor=tensor, labels=labels, window=window, stride=stride))
 
     self.data = ConcatDataset(data)

@@ -8,8 +8,8 @@ from torch.utils.data import DataLoader, random_split
 from common.data import (ComposeTransforms, LabelDtypeTransform, NaNToConstTransform, Pamap2,
                          Pamap2Options, Pamap2SplitIMUView, ResampleTransform)
 from common.model import CNNIMU
-from common.pl_callbacks import MonitorWF1
-from common.pl_callbacks.monitors import MonitorAcc
+from common.pl_components import MonitorWF1
+from common.pl_components.monitors import MonitorAcc
 
 
 def main() -> None:

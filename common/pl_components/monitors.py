@@ -3,7 +3,7 @@ import typing as t
 import torch
 import logging
 from common.metrics import wF1Score
-from common.pl_callbacks.generic_result_monitor import GenericResultMonitor
+from common.pl_components.generic_result_monitor import GenericResultMonitor
 
 logger = logging.getLogger(__name__)
 

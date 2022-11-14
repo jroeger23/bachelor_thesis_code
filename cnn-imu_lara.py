@@ -6,7 +6,7 @@ import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_log
 from pytorch_lightning import callbacks as pl_cb
 from pytorch_lightning import profilers as pl_prof
-from common.pl_callbacks import MonitorAcc, MonitorWF1
+from common.pl_components import MonitorAcc, MonitorWF1, ModelProfiler
 
 
 def main():
@@ -39,7 +39,8 @@ def main():
   # Setup model ####################################################################################
   imu_sizes = [segment.shape[1] for segment in train_data[0][0]]
   model = CNNIMU(n_blocks=2, imu_sizes=imu_sizes, sample_length=100, n_classes=8)
-  trainer = pl.Trainer(max_epochs=15,
+  pl_logger = pl_log.TensorBoardLogger(save_dir='logs', name='CNNIMU-LARa')
+  trainer = pl.Trainer(max_epochs=3,
                        accelerator='auto',
                        callbacks=[
                            pl_cb.DeviceStatsMonitor(),
@@ -53,9 +54,8 @@ def main():
                        ],
                        val_check_interval=1 / 10,
                        enable_checkpointing=True,
-                       profiler=pl_prof.AdvancedProfiler(dirpath="logs/CNNIMU-LARa",
-                                                         filename="perf_logs"),
-                       logger=pl_log.TensorBoardLogger(save_dir='logs', name='CNNIMU-LARa'))
+                       profiler=ModelProfiler(dirpath=pl_logger.log_dir, filename="perf_logs"),
+                       logger=pl_logger)
   trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=validation_loader)
   trainer.test(model=model, dataloaders=test_loader)
 
