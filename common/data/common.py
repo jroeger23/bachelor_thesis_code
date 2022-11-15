@@ -298,13 +298,15 @@ def describeLabels(
       t.Union[str, t.List[str]]: a single label or a list of labels
   """
   if type(labels) is torch.Tensor:
-    if len(labels) == 1:
-      return labels_map[int(labels.item())]
-    elif labels.shape[1] == 1:
-      return [labels_map[int(l.item())] for l in labels]
+    labels = labels.squeeze()
+    if labels.ndim == 1:
+      if len(labels) == 1:
+        return labels_map[int(labels.item())]
+      else:
+        return [labels_map[int(l.item())] for l in labels]
     else:
       raise ValueError('Cannot describe multi dimensional labels')
-  elif type(labels) is t.List:
+  elif type(labels) is list:
     return [labels_map[int(l)] for l in labels]
   elif type(labels) is int:
     return labels_map[labels]
