@@ -158,7 +158,7 @@ class Pamap2View(View):
                                              unchanged labels
     """
     batch = torch.atleast_2d(batch)
-    return batch[:, self.indices], labels
+    return batch[:, self.indices].squeeze(), labels
 
   def __str__(self) -> str:
     return f'Pamap2View({self.entries})'

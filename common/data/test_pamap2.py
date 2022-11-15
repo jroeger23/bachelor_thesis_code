@@ -27,12 +27,13 @@ def test_pamap2IMUViewOrder():
 
 
 def test_pamap2SplitIMUViewOrder():
-  view = Pamap2SplitIMUView(locations=Pamap2SplitIMUView.allLocations())
+  view = Pamap2SplitIMUView(locations=Pamap2SplitIMUView.allLocations(), with_heart_rate=True)
 
   test = torch.Tensor(range(52 * 10)).reshape((10, 52))
 
   batches, _ = view(test, torch.Tensor())
 
-  assert batches[0].equal(test[:, 1:18])
-  assert batches[1].equal(test[:, 18:35])
-  assert batches[2].equal(test[:, 35:52])
+  assert batches[0].equal(test[:, 0].squeeze())
+  assert batches[1].equal(test[:, 1:18])
+  assert batches[2].equal(test[:, 18:35])
+  assert batches[3].equal(test[:, 35:52])
