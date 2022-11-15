@@ -1,3 +1,4 @@
+import os
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning import callbacks as pl_cb
@@ -40,6 +41,19 @@ def main():
 
   # Setup Training #################################################################################
   pl_logger = pl_log.TensorBoardLogger(save_dir='logs', name='CNNIMU-Opportunity-Locomotion')
+  checkpoint_dir = os.path.join(pl_logger.log_dir)
+  save_3_best_wf1 = pl_cb.ModelCheckpoint(
+      save_top_k=3,
+      monitor='validation/wf1',
+      filename=
+      'cnnimu-opportunity-locomotion-e={epoch}-s={global_step}-wf1={validation/wf1:.03f}-loss={validation/loss:.03f}'
+  )
+  save_3_best_loss = pl_cb.ModelCheckpoint(
+      save_top_k=3,
+      monitor='validation/loss',
+      filename=
+      'cnnimu-opportunity-locomotion-e={epoch}-s={global_step}-wf1={validation/wf1:.03f}-loss={validation/loss:.03f}'
+  )
   trainer = pl.Trainer(max_epochs=15,
                        accelerator='auto',
                        callbacks=[
@@ -51,7 +65,9 @@ def main():
                                                patience=22,
                                                mode='min'),
                            MonitorWF1(),
-                           MonitorAcc()
+                           MonitorAcc(),
+                           save_3_best_loss,
+                           save_3_best_wf1,
                        ],
                        val_check_interval=1 / 10,
                        enable_checkpointing=True,
