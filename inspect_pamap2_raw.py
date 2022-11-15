@@ -1,8 +1,7 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-from common.data import (Opportunity, OpportunityOptions, OpportunityView, Pamap2, Pamap2IMUView,
-                         Pamap2Options)
+from common.data import Pamap2, Pamap2IMUView, Pamap2Options
 
 validation_data = Pamap2(window=300,
                          stride=300,

@@ -133,13 +133,16 @@ view_indices = {
     'LOCATION TAG2': [233, 234, 235],
     'LOCATION TAG3': [236, 237, 238],
     'LOCATION TAG4': [239, 240, 241],
-    'Locomotion': [0],
-    'HL_Activity': [1],
-    'LL_Left_Arm': [2],
-    'LL_Left_Arm_Object': [3],
-    'LL_Right_Arm': [4],
-    'LL_Right_Arm_Object': [5],
-    'ML_Both_Arms': [6],
+}
+
+label_view_indices = {
+    'Locomotion': 0,
+    'HL_Activity': 1,
+    'LL_Left_Arm': 2,
+    'LL_Left_Arm_Object': 3,
+    'LL_Right_Arm': 4,
+    'LL_Right_Arm_Object': 5,
+    'ML_Both_Arms': 6,
 }
 
 labels_map = {
@@ -244,27 +247,237 @@ labels_map = {
     105: 'HL_Activity Sandwich time',
 }
 
+
 @wraps(describeLabels)
-def describeOpportunityLabels(labels : t.Union[int, t.Iterable[int], torch.Tensor]) -> t.Union[str, t.List[str]]:
+def describeOpportunityLabels(
+    labels: t.Union[int, t.Iterable[int], torch.Tensor]) -> t.Union[str, t.List[str]]:
   return describeLabels(labels_map=labels_map, labels=labels)
+
 
 def allOpportunityLabels() -> t.Mapping[int, str]:
   return labels_map
 
-class OpportunityView():
+
+class OpportunityLabelView(View):
 
   def __init__(self, entries: t.List[str]) -> None:
+    """OpportunityLabelView  filtes a label tensor to only contain certain columns
+
+    Args:
+        entries (t.List[str]): column names to keep
+    """
+    self.entries = entries
+    self.indices = [label_view_indices[e] for e in entries]
+
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    """Apply Label View
+
+    Args:
+        batch (torch.Tensor): batch to view (untouched)
+        labels (torch.Tensor): label to view
+
+    Returns:
+        t.Tuple[torch.Tensor, torch.Tensor]: batch, label filtered by entries
+    """
+    labels = torch.atleast_2d(labels)
+    return batch, labels[:, self.indices].squeeze()
+
+  @staticmethod
+  def allEntries() -> t.List[str]:
+    return list(label_view_indices.keys())
+
+  def __str__(self) -> str:
+    return f'OpportunityLabelView {self.entries}'
+
+
+class OpportunitySplitLabelView(View):
+
+  def __init__(self, entries: t.List[str]) -> None:
+    """OpportunityLabelView spllits a labels tensor into a list of 1D label tensors
+
+    Args:
+        entries (t.List[str]): column names to keep
+    """
+    self.entries = entries
+    self.views = [OpportunityLabelView([e]) for e in entries]
+
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[torch.Tensor, t.List[torch.Tensor]]:
+    """Apply Label Split View
+
+    Args:
+        batch (torch.Tensor): batch to view (untouched)
+        labels (torch.Tensor): label to view
+
+    Returns:
+        t.Tuple[torch.Tensor, torch.Tensor]: batch, label list by entries
+    """
+    label_split = [v(batch, labels)[1] for v in self.views]
+    return batch, label_split
+
+  @staticmethod
+  def allEntries() -> t.List[str]:
+    return list(label_view_indices.keys())
+
+  def __str__(self) -> str:
+    return f'OpportunitySplitLabelView {self.entries}'
+
+
+class OpportunityLocomotionLabelView(View):
+
+  def __init__(self) -> None:
+    """Create a new Opportunity Locomotion label view
+    """
+    self.view = OpportunityLabelView(['Locomotion'])
+
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    """Apply the view
+
+    Args:
+        batch (torch.Tensor): the batch (untouched)
+        labels (torch.Tensor): the labels to view
+
+    Returns:
+        t.Tuple[torch.Tensor, torch.Tensor]: batch, labels (locomotion)
+    """
+    return self.view(batch, labels)
+
+  def __str__(self) -> str:
+    return 'OpportunityLocomotionLabelView'
+
+
+class OpportunitySensorUnitView(View):
+
+  def __init__(self, entries: t.List[str]) -> None:
+    self.entries = entries
     self.indices = []
     for e in entries:
       self.indices.extend(view_indices[e])
 
-  def __call__(self, batch: torch.Tensor):
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    """Apply Sensor Unit View
+
+    Args:
+        batch (torch.Tensor): batch to view
+        labels (torch.Tensor): label to view
+
+    Returns:
+        
+    """
     batch = torch.atleast_2d(batch)
-    return batch[:, self.indices]
+    return batch[:, self.indices].squeeze(), labels
 
   @staticmethod
   def allEntries() -> t.List[str]:
     return list(view_indices.keys())
+
+  def __str__(self) -> str:
+    return f'OpportunitySensorUnitView {self.entries}'
+
+
+class OpportunitySplitSensorUnitsView(View):
+  """A view to split a raw Opportunity data tensor into a list of sensor unit tensors
+  """
+
+  def __init__(self, entries: t.List[str]) -> None:
+    """A view to split a raw Opportunity data tensor into a list of sensor unit tensors
+
+    Args:
+        entries (t.List[str]): the sensor unit entries to use (__call__ return order)
+    """
+    self.entries = entries
+    self.views = [OpportunitySensorUnitView([e]) for e in entries]
+
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[t.List[torch.Tensor], torch.Tensor]:
+    """Apply Split View
+
+    Args:
+        batch (torch.Tensor): the raw batch tensor to split
+        labels (torch.Tensor): the labels (untouched)
+
+    Returns:
+        t.Tuple[t.List[torch.Tensor], torch.Tensor]: a list of sensor unit batch tensors, labels
+    """
+    sensor_units = [v(batch, labels)[0] for v in self.views]
+    return sensor_units, labels
+
+  @staticmethod
+  def allEntries() -> t.List[str]:
+    """Get all possible entries
+
+    Returns:
+        t.List[str]: the entries
+    """
+    return list(view_indices.keys())
+
+  def __str__(self) -> str:
+    return f'OpportunitySplitSensorUnitsView {self.entries}'
+
+
+class OpportunityHumanSensorUnitsView(View):
+  """A view to split a raw Opportunity data tensor into a list of body worn sensor unit tensors
+  """
+
+  def __init__(self) -> None:
+    """A view to split a raw Opportunity data tensor into a list of body worn sensor unit tensors
+    """
+    entries = [
+        'Accelerometer RKN^', 'Accelerometer HIP', 'Accelerometer LUA^', 'Accelerometer RUA_',
+        'Accelerometer LH', 'Accelerometer BACK', 'Accelerometer RKN_', 'Accelerometer RWR',
+        'Accelerometer RUA^', 'Accelerometer LUA_', 'Accelerometer LWR', 'Accelerometer RH',
+        'InertialMeasurementUnit BACK', 'InertialMeasurementUnit RUA',
+        'InertialMeasurementUnit RLA', 'InertialMeasurementUnit LUA', 'InertialMeasurementUnit LLA',
+        'InertialMeasurementUnit L-SHOE', 'InertialMeasurementUnit R-SHOE'
+    ]
+    self.view = OpportunitySplitSensorUnitsView(entries)
+
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[t.List[torch.Tensor], torch.Tensor]:
+    """Apply Split View
+
+    Args:
+        batch (torch.Tensor): the raw batch tensor to split
+        labels (torch.Tensor): the labels (untouched)
+
+    Returns:
+        t.Tuple[t.List[torch.Tensor], torch.Tensor]: a list of sensor unit batch tensors, labels
+    """
+    return self.view(batch, labels)
+
+  def __str__(self) -> str:
+    return f'OpportunityHumanSensorUnitsView'
+
+
+class OpportunityLocomotionLabelAdjustMissing3(Transform):
+
+  def __init__(self) -> None:
+    """Create a view to fix the missing 3 entry in the opportunity labels
+    """
+    self.view = OpportunityLocomotionLabelView()
+
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    """Apply the view
+
+    Args:
+        batch (torch.Tensor): untouched
+        labels (torch.Tensor): labels to fix
+
+    Returns:
+        t.Tuple[torch.Tensor, torch.Tensor]: the labels with locomotion 4->3 and 5->4
+    """
+    labels_view = labels[:, label_view_indices['Locomotion']]
+    labels_view[labels_view == 4] = 3
+    labels_view[labels_view == 5] = 4
+
+    return batch, labels
+
+  def __str__(self) -> str:
+    return 'OpportunityLocomotionLabelAdjustMissing3'
 
 
 class OpportunityOptions(Enum):
@@ -285,7 +498,7 @@ class OpportunityOptions(Enum):
 class Opportunity(Dataset):
 
   def __init__(self,
-               root: str,
+               root: str = './data',
                window: int = 24,
                stride: int = 12,
                transform: t.Optional[Transform] = None,
@@ -324,7 +537,7 @@ class Opportunity(Dataset):
       suffixes.append('-ADL4')
     if OpportunityOptions.ADL5 in opts or OpportunityOptions.ALL_ADL in opts:
       suffixes.append('-ADL5')
-    if OpportunityOptions.DRILL in opts or OpportunityOptions.ALL_ADL in opts:
+    if OpportunityOptions.DRILL in opts:
       suffixes.append('-Drill')
 
     prefixes = []
@@ -354,7 +567,10 @@ class Opportunity(Dataset):
     )
 
   def __getitem__(self, index):
-    return self.data[index]
+    if self.view is None:
+      return self.data[index]
+    else:
+      return self.view(*self.data[index])
 
   def __len__(self) -> int:
     return len(self.data)
