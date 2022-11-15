@@ -121,7 +121,7 @@ class ModelProfiler(pl_p.Profiler):
 
       return s
 
-    quantiles = torch.tensor([0.25, 0.5, 0.75])
+    quantiles = torch.tensor([0.0, 0.25, 0.5, 0.75, 1.0])
     summary = f'\n{"-"*80}\nModelProfiler ({self.start_time})\n{"-"*20}\n'
     if len(self.train_times) != 0:
       summary += f'Total Train Time:         {si_format(train_times.sum(), 2, fmt)}\n'
