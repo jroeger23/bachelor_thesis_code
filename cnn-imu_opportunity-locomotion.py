@@ -46,21 +46,21 @@ def main():
       mode='max',
       auto_insert_metric_name=False,
       filename=
-      'best_wf1-e={epoch}-s={global_step}-wf1={validation/wf1:.04f}-loss={validation/loss:.04f}-acc={validation/acc:.04f}'
+      'best_wf1-e={epoch}-s={step}-wf1={validation/wf1:.04f}-loss={validation/loss:.04f}-acc={validation/acc:.04f}'
   )
   save_best_loss = pl_cb.ModelCheckpoint(
       monitor='validation/loss',
       mode='min',
       auto_insert_metric_name=False,
       filename=
-      'best_loss-e={epoch}-s={global_step}-wf1={validation/wf1:.04f}-loss={validation/loss:.04f}-acc={validation/acc:.04f}'
+      'best_loss-e={epoch}-s={step}-wf1={validation/wf1:.04f}-loss={validation/loss:.04f}-acc={validation/acc:.04f}'
   )
   save_best_acc = pl_cb.ModelCheckpoint(
       monitor='validation/acc',
       mode='max',
       auto_insert_metric_name=False,
       filename=
-      'best_acc-e={epoch}-s={global_step}-wf1={validation/wf1:.04f}-loss={validation/loss:.04f}-acc={validation/acc:.04f}'
+      'best_acc-e={epoch}-s={step}-wf1={validation/wf1:.04f}-loss={validation/loss:.04f}-acc={validation/acc:.04f}'
   )
   trainer = pl.Trainer(max_epochs=10,
                        accelerator='auto',
