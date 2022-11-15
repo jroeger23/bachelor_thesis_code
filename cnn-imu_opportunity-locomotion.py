@@ -41,22 +41,28 @@ def main():
 
   # Setup Training #################################################################################
   pl_logger = pl_log.TensorBoardLogger(save_dir='logs', name='CNNIMU-Opportunity-Locomotion')
-  checkpoint_dir = os.path.join(pl_logger.log_dir)
-  save_3_best_wf1 = pl_cb.ModelCheckpoint(
-      save_top_k=3,
+  save_best_wf1 = pl_cb.ModelCheckpoint(
       monitor='validation/wf1',
       mode='max',
       auto_insert_metric_name=False,
       filename=
-      'opp-loc-e={epoch}-s={global_step}-wf1={validation/wf1:.03f}-loss={validation/loss:.03f}')
-  save_3_best_loss = pl_cb.ModelCheckpoint(
-      save_top_k=3,
+      'best_wf1-e={epoch}-s={global_step}-wf1={validation/wf1:.04f}-loss={validation/loss:.04f}-acc={validation/acc:.04f}'
+  )
+  save_best_loss = pl_cb.ModelCheckpoint(
       monitor='validation/loss',
       mode='min',
       auto_insert_metric_name=False,
       filename=
-      'opp-loc-e={epoch}-s={global_step}-wf1={validation/wf1:.03f}-loss={validation/loss:.03f}')
-  trainer = pl.Trainer(max_epochs=15,
+      'best_loss-e={epoch}-s={global_step}-wf1={validation/wf1:.04f}-loss={validation/loss:.04f}-acc={validation/acc:.04f}'
+  )
+  save_best_acc = pl_cb.ModelCheckpoint(
+      monitor='validation/acc',
+      mode='max',
+      auto_insert_metric_name=False,
+      filename=
+      'best_acc-e={epoch}-s={global_step}-wf1={validation/wf1:.04f}-loss={validation/loss:.04f}-acc={validation/acc:.04f}'
+  )
+  trainer = pl.Trainer(max_epochs=10,
                        accelerator='auto',
                        callbacks=[
                            pl_cb.DeviceStatsMonitor(),
@@ -64,12 +70,13 @@ def main():
                            pl_cb.ModelSummary(max_depth=2),
                            pl_cb.EarlyStopping(monitor='validation/loss',
                                                min_delta=0.001,
-                                               patience=22,
+                                               patience=20,
                                                mode='min'),
                            MonitorWF1(),
                            MonitorAcc(),
-                           save_3_best_loss,
-                           save_3_best_wf1,
+                           save_best_acc,
+                           save_best_loss,
+                           save_best_wf1,
                        ],
                        val_check_interval=1 / 10,
                        enable_checkpointing=True,
@@ -77,7 +84,9 @@ def main():
                        logger=pl_logger)
 
   trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=validation_loader)
-  trainer.test(model=model, dataloaders=test_loader)
+  trainer.test(ckpt_path=save_best_wf1.best_model_path, dataloaders=test_loader)
+  trainer.test(ckpt_path=save_best_acc.best_model_path, dataloaders=test_loader)
+  trainer.test(ckpt_path=save_best_loss.best_model_path, dataloaders=test_loader)
 
 
 if __name__ == '__main__':
