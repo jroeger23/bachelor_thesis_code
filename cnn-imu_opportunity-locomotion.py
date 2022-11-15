@@ -45,15 +45,17 @@ def main():
   save_3_best_wf1 = pl_cb.ModelCheckpoint(
       save_top_k=3,
       monitor='validation/wf1',
+      mode='max',
+      auto_insert_metric_name=False,
       filename=
-      'cnnimu-opportunity-locomotion-e={epoch}-s={global_step}-wf1={validation/wf1:.03f}-loss={validation/loss:.03f}'
-  )
+      'opp-loc-e={epoch}-s={global_step}-wf1={validation/wf1:.03f}-loss={validation/loss:.03f}')
   save_3_best_loss = pl_cb.ModelCheckpoint(
       save_top_k=3,
       monitor='validation/loss',
+      mode='min',
+      auto_insert_metric_name=False,
       filename=
-      'cnnimu-opportunity-locomotion-e={epoch}-s={global_step}-wf1={validation/wf1:.03f}-loss={validation/loss:.03f}'
-  )
+      'opp-loc-e={epoch}-s={global_step}-wf1={validation/wf1:.03f}-loss={validation/loss:.03f}')
   trainer = pl.Trainer(max_epochs=15,
                        accelerator='auto',
                        callbacks=[
