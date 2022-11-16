@@ -6,3 +6,5 @@
 /lightning_logs
 /logs
 *perf_logs*
+credentials.txt
+config.ini
