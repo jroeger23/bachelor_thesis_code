@@ -70,7 +70,7 @@ def main():
                            pl_cb.ModelSummary(max_depth=2),
                            pl_cb.EarlyStopping(monitor='validation/loss',
                                                min_delta=0.001,
-                                               patience=20,
+                                               patience=13,
                                                mode='min'),
                            MonitorWF1(),
                            MonitorAcc(),
