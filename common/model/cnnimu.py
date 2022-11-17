@@ -245,6 +245,16 @@ class CNNIMU(pl.LightningModule):
       return torch.optim.Adam(params=self.parameters())
 
     if self.extra_hyper_params['optimizer'] == 'Adam':
-      return torch.optim.Adam(params=self.parameters(), **self.extra_hyper_params)
+      adapt = {
+          k: self.extra_hyper_params[k]
+          for k in ('lr', 'betas', 'momentum')
+          if k in self.extra_hyper_params
+      }
+      return torch.optim.Adam(params=self.parameters(), **adapt)
     elif self.extra_hyper_params['optimizer'] == 'RMSProp':
-      return torch.optim.RMSprop(params=self.parameters(), **self.extra_hyper_params)
+      adapt = {
+          k: self.extra_hyper_params[k]
+          for k in ('lr', 'alpha', 'weight_decay', 'momentum')
+          if k in self.extra_hyper_params
+      }
+      return torch.optim.RMSprop(params=self.parameters(), **adapt)
