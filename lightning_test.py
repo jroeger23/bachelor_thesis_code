@@ -8,8 +8,8 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard.writer import SummaryWriter
 
 from common.data import mnist
-from common.metrics import auroc, toBinary, rocCurve, rocFigure
-from common.tui import modeDialog
+from common.helper.metrics import auroc, toBinary, rocCurve, rocFigure
+from common.helper.tui import modeDialog
 
 logging.getLogger().setLevel(logging.INFO)
 logger = logging.getLogger(__name__)

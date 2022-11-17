@@ -2,7 +2,7 @@ import pytorch_lightning as pl
 import typing as t
 import torch
 import logging
-from common.exception import MisconfigurationError
+from common.helper.exception import MisconfigurationError
 
 logger = logging.getLevelName(__name__)
 
