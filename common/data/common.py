@@ -580,6 +580,42 @@ class BatchAdditiveGaussianNoise(Transform):
     return f'BatchAdditiveGaussianNoise(mu={self.mu}, sigma={self.sigma})'
 
 
+class RangeNormalize(Transform):
+
+  def __init__(self, range_min: float = 0, range_max: float = 1, dim: int = 1) -> None:
+    """Range normalize a batch along a dimension
+
+    Args:
+        range_min (float, optional): desired minimum batch value. Defaults to 0.
+        range_max (float, optional): desired maximum batch value. Defaults to 1.
+        dim (int, optional): the dimension, along which the normalization takes place. Defaults to 1.
+    """
+    self.range_min = range_min
+    self.range_max = range_max
+    self.dim = dim
+
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    """Apply batch range normalization
+
+    Args:
+        batch (torch.Tensor): the batch to transform
+        labels (torch.Tensor): the labels to transform (untouched)
+
+    Returns:
+        t.Tuple[torch.Tensor, torch.Tensor]: range normalied batch, labels
+    """
+    batch -= batch.amin(dim=self.dim, keepdim=True)  # Align zero
+    batch /= batch.amax(dim=self.dim, keepdim=True)  # Unit size
+    batch *= (self.range_max - self.range_min)  # Scale
+    batch += self.range_min  # Shift zero
+
+    return batch, labels
+
+  def __str__(self) -> str:
+    return f'RangeNormalize(range_min={self.range_min}, range_max={self.range_max}, dim={self.dim})'
+
+
 class SegmentedDataset(Dataset):
   """A Dataset wrapper that segments the underlying dataset
   """
