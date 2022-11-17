@@ -10,8 +10,8 @@ from common.data import (CombineViews, ComposeTransforms, LabelDtypeTransform, L
                          LARaClassLabelView, LARaOptions, LARaSplitIMUView, NaNToConstTransform,
                          ResampleTransform)
 from common.model import CNNIMU
-from common.pl_components import MonitorAcc, MonitorWF1, SacredLogger
-from common.helper import parseMongoObserverArgs
+from common.pl_components import MonitorAcc, MonitorWF1, SacredLogger, MonitorBatchTime
+from common.helper import parseMongoObserverArgs, getRunCheckpointDirectory
 
 ex = sacred.Experiment(name='CNN-IMU_LARa')
 
@@ -25,7 +25,7 @@ def default_config():
   sample_frequency = 30
   batch_size = 150
   cnn_imu_blocks = 3
-  max_epochs = 15
+  max_epochs = 50
   loss_patience = 22
   validation_interval = 1 / 10
   optimizer = 'Adam'
@@ -35,7 +35,7 @@ def default_config():
     betas = (0.9, 0.999)
     weight_decay = 0
   elif optimizer == 'RMSProp':
-    lr = 1e-3
+    lr = 1e-2
     alpha = 0.99
     weight_decay = 0.95
     momentum = 0
@@ -43,8 +43,7 @@ def default_config():
 
 @ex.automain
 def main(window: int, stride: int, sample_frequency: int, batch_size: int, cnn_imu_blocks: int,
-         max_epochs: int, loss_patience: int, validation_interval: float, _run: Run, optimizer: str,
-         **extra_hyper_params):
+         max_epochs: int, loss_patience: int, validation_interval: float, _run: Run, _config):
   # Setup datasets #################################################################################
   data = LARa(download=True,
               window=window,
@@ -66,13 +65,42 @@ def main(window: int, stride: int, sample_frequency: int, batch_size: int, cnn_i
   validation_loader = DataLoader(dataset=validation_data, batch_size=batch_size, shuffle=False)
   test_loader = DataLoader(dataset=test_data, batch_size=batch_size, shuffle=False)
 
+  # Checkpointing ##################################################################################
+  best_acc_ckpt = pl_cb.ModelCheckpoint(
+      dirpath=getRunCheckpointDirectory(root='logs/checkpoints', _run=_run),
+      filename=
+      'BEST_ACC-e={epoch}-s={step}-loss={validation/loss}-acc={validation/acc}-wf1={validation/wf1}',
+      auto_insert_metric_name=False,
+      monitor='validation/acc',
+      mode='max',
+  )
+  best_wf1_ckpt = pl_cb.ModelCheckpoint(
+      dirpath=getRunCheckpointDirectory(root='logs/checkpoints', _run=_run),
+      filename=
+      'BEST_WF1-e={epoch}-s={step}-loss={validation/loss}-acc={validation/acc}-wf1={validation/wf1}',
+      auto_insert_metric_name=False,
+      monitor='validation/wf1',
+      mode='max',
+  )
+  best_loss_ckpt = pl_cb.ModelCheckpoint(
+      dirpath=getRunCheckpointDirectory(root='logs/checkpoints', _run=_run),
+      filename=
+      'BEST_LOSS-e={epoch}-s={step}-loss={validation/loss}-acc={validation/acc}-wf1={validation/wf1}',
+      auto_insert_metric_name=False,
+      monitor='validation/loss',
+      mode='min',
+  )
+
   # Setup model ####################################################################################
   imu_sizes = [segment.shape[1] for segment in train_data[0][0]]
-  model = CNNIMU(n_blocks=cnn_imu_blocks, imu_sizes=imu_sizes, sample_length=window, n_classes=8)
+  model = CNNIMU(n_blocks=cnn_imu_blocks,
+                 imu_sizes=imu_sizes,
+                 sample_length=window,
+                 n_classes=8,
+                 **_config)
   trainer = pl.Trainer(max_epochs=max_epochs,
                        accelerator='auto',
                        callbacks=[
-                           pl_cb.DeviceStatsMonitor(),
                            pl_cb.LearningRateMonitor(),
                            pl_cb.ModelSummary(max_depth=2),
                            pl_cb.EarlyStopping(monitor='validation/loss',
@@ -80,10 +108,12 @@ def main(window: int, stride: int, sample_frequency: int, batch_size: int, cnn_i
                                                patience=loss_patience,
                                                mode='min'),
                            MonitorWF1(),
-                           MonitorAcc()
+                           MonitorAcc(),
+                           MonitorBatchTime(), best_acc_ckpt, best_wf1_ckpt, best_loss_ckpt
                        ],
                        logger=SacredLogger(_run=_run),
-                       val_check_interval=validation_interval,
-                       enable_checkpointing=False)
+                       val_check_interval=validation_interval)
   trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=validation_loader)
-  trainer.test(model=model, dataloaders=test_loader)
+  trainer.test(ckpt_path=best_loss_ckpt.best_model_path, dataloaders=test_loader)
+  trainer.test(ckpt_path=best_acc_ckpt.best_model_path, dataloaders=test_loader)
+  trainer.test(ckpt_path=best_wf1_ckpt.best_model_path, dataloaders=test_loader)
