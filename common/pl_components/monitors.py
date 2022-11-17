@@ -4,6 +4,7 @@ import torch
 import logging
 from common.metrics import wF1Score
 from common.pl_components.generic_result_monitor import GenericResultMonitor
+from common.pl_components.model_profiler import Timer
 
 logger = logging.getLogger(__name__)
 
@@ -59,3 +60,49 @@ class MonitorAcc(GenericResultMonitor):
     """
 
     super().__init__(on_validation=on_validation, on_test=on_test, metric=getAcc)
+
+
+class MonitorBatchTime(pl.Callback):
+  """Monitor all batch times
+
+  Args:
+      pl (_type_): _description_
+  """
+
+  def __init__(self):
+    self.train_batch_times = []
+    self.validation_batch_times = []
+    self.test_batch_times = []
+    self.train_timer = Timer()
+    self.validation_timer = Timer()
+    self.test_timer = Timer()
+
+  def on_train_batch_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule, batch,
+                           batch_idx) -> None:
+    self.train_timer.start()
+
+  def on_train_batch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule, outputs, batch,
+                         batch_idx) -> None:
+    time = self.train_timer.stop()
+    pl_module.log(name='train/batch_time', value=time)
+    self.train_batch_times.append(time)
+
+  def on_validation_batch_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule, batch,
+                                batch_idx, dataloader_idx) -> None:
+    self.validation_timer.start()
+
+  def on_validation_batch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule, outputs,
+                              batch, batch_idx, dataloader_idx) -> None:
+    time = self.validation_timer.stop()
+    pl_module.log(name='validation/batch_time', value=time)
+    self.validation_batch_times.append(time)
+
+  def on_test_batch_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule, batch,
+                          batch_idx, dataloader_idx) -> None:
+    self.test_timer.start()
+
+  def on_test_batch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule, outputs, batch,
+                        batch_idx, dataloader_idx) -> None:
+    time = self.test_timer.stop()
+    pl_module.log(name='test/batch_time', value=time)
+    self.test_batch_times.append(time)
