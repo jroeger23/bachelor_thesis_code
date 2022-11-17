@@ -137,8 +137,8 @@ class CNNIMU(pl.LightningModule):
   classified by a fully-connected softmax classifier.
   """
 
-  def __init__(self, n_blocks: int, imu_sizes: t.List[int], sample_length: int,
-               n_classes: int) -> None:
+  def __init__(self, n_blocks: int, imu_sizes: t.List[int], sample_length: int, n_classes: int,
+               **extra_hyper_params) -> None:
     """Create a new CNN-IMU. With a given block depth, IMU data columns and a sample length
 
     Args:
@@ -149,6 +149,7 @@ class CNNIMU(pl.LightningModule):
         n_classes (int): the number of output classes
     """
     super().__init__()
+    self.extra_hyper_params = extra_hyper_params
     pipelines = [CNNIMUPipeline(n_blocks=n_blocks) for _ in imu_sizes]
 
     pipe_output_shapes = [
@@ -240,4 +241,10 @@ class CNNIMU(pl.LightningModule):
     return self(imu_x)
 
   def configure_optimizers(self):
-    return torch.optim.Adam(params=self.parameters())
+    if 'optimizer' not in self.extra_hyper_params:
+      return torch.optim.Adam(params=self.parameters())
+
+    if self.extra_hyper_params['optimizer'] == 'Adam':
+      return torch.optim.Adam(params=self.parameters(), **self.extra_hyper_params)
+    elif self.extra_hyper_params['optimizer'] == 'RMSProp':
+      return torch.optim.RMSprop(params=self.parameters(), **self.extra_hyper_params)
