@@ -548,6 +548,38 @@ class ResampleTransform(Transform):
     return f'DownsampleTransform (f_in={self.freq_in}, f_out={self.freq_out})'
 
 
+class BatchAdditiveGaussianNoise(Transform):
+
+  def __init__(self, mu: float = 0, sigma: float = 1) -> None:
+    """Add normal distributed noise to the batch
+
+    Args:
+        mu (float, optional): mean. Defaults to 0.
+        sigma (float, optional): standard deviation. Defaults to 1.
+    """
+    self.mu = mu
+    self.sigma = sigma
+    self.normal = torch.distributions.Normal(loc=self.mu, scale=self.sigma)
+
+  def __call__(self, batch: torch.Tensor,
+               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    """Apply gaussian noise to the batch
+
+    Args:
+        batch (torch.Tensor): the batch to transform
+        labels (torch.Tensor): the labels (untouched)
+
+    Returns:
+        t.Tuple[torch.Tensor, torch.Tensor]: batch + noise, labels
+    """
+    noise = self.normal.sample(sample_shape=batch.shape)
+
+    return batch + noise, labels
+
+  def __str__(self) -> str:
+    return f'BatchAdditiveGaussianNoise(mu={self.mu}, sigma={self.sigma})'
+
+
 class SegmentedDataset(Dataset):
   """A Dataset wrapper that segments the underlying dataset
   """

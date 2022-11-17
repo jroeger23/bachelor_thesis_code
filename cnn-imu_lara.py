@@ -49,7 +49,7 @@ def main(window: int, stride: int, sample_frequency: int, batch_size: int, cnn_i
               window=window,
               stride=stride,
               opts=[LARaOptions.ALL_RUNS, LARaOptions.ALL_SUBJECTS],
-              transform=ComposeTransforms([
+              static_transform=ComposeTransforms([
                   NaNToConstTransform(batch_constant=0, label_constant=7),
                   ResampleTransform(freq_in=100, freq_out=sample_frequency),
                   LabelDtypeTransform(dtype=torch.int64)

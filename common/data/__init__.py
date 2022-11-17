@@ -1,5 +1,5 @@
 from .common import (CombineViews, ComposeTransforms, LabelDtypeTransform, NaNToConstTransform,
-                     ResampleTransform)
+                     ResampleTransform, BatchAdditiveGaussianNoise)
 from .lara import (LARa, LARaClassLabelView, LARaDataView, LARaIMUView, LARaLabelsView, LARaOptions,
                    LARaSplitIMUView, describeLARaLabels)
 from .mnist import *

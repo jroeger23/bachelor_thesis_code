@@ -9,7 +9,8 @@ import torch
 from si_prefix import si_format
 from torch.utils.data import ConcatDataset, Dataset
 
-from .common import (SegmentedDataset, Transform, View, ensure_download_zip, load_cached_csv)
+from .common import (SegmentedDataset, Transform, View, ensure_download_zip, load_cached_csv,
+                     describeLabels)
 
 logger = logging.getLogger(__name__)
 
@@ -85,18 +86,8 @@ labels_view_indices = {
 }
 
 
-def describeLARaLabels(labels) -> t.List[str]:
-  if type(labels) is torch.Tensor:
-    if len(labels) == 1:
-      return [labels_map[int(labels.item())]]
-    elif labels.shape[1] == 1:
-      return [labels_map[int(l.item())] for l in labels]
-    else:
-      raise ValueError('Cannot describe multi dimensional labels')
-  elif type(labels) is t.List:
-    return [labels_map[int(l)] for l in labels]
-  else:
-    return [labels_map[int(labels)]]
+def describeLARaLabels(labels) -> t.Union[t.List[str], str]:
+  return describeLabels(labels_map=labels_map, labels=labels)
 
 
 class LARaLabelsView(View):
@@ -211,6 +202,9 @@ class LARaSplitIMUView(View):
 
 
 class LARaOptions(Enum):
+  DEFAULT_TRAIN_SET = 1
+  DEFAULT_VALIDATION_SET = 2
+  DEFAULT_TEST_SET = 3
   ALL_SUBJECTS = 100
   SUBJECT07 = 107
   SUBJECT08 = 108
@@ -262,13 +256,15 @@ class LARa(Dataset):
                root: str = './data',
                window: int = 24,
                stride: int = 12,
-               transform: t.Optional[Transform] = None,
+               static_transform: t.Optional[Transform] = None,
+               dynamic_transform: t.Optional[Transform] = None,
                view: t.Optional[View] = None,
                download: bool = True,
                opts: t.Iterable[LARaOptions] = []):
     self.dataset_name = 'LARa'
     self.zip_dirs = ['IMU data/']
     self.root = os.path.join(root, self.dataset_name, 'IMU data')
+    self.dynamic_transform = dynamic_transform
     self.view = view
 
     if download:
@@ -281,7 +277,8 @@ class LARa(Dataset):
     logger.info(f'Loading LARa Dataset...')
     logger.info(f'  - Segmentation (w={window}, s={stride})')
     logger.info(f'  - Subsets {list(map(lambda o: o.name, opts))}')
-    logger.info(f'  - Transform {str(transform)}',)
+    logger.info(f'  - Static Transform {str(static_transform)}',)
+    logger.info(f'  - Dynamic Transform {str(dynamic_transform)}',)
     logger.info(f'  - View {str(view)}',)
 
     subjects = []
@@ -377,8 +374,8 @@ class LARa(Dataset):
       _, labels = load_cached_csv(root=self.root, name=f'{name}_labels', logger=logger)
       memory += getsizeof(tensor.storage())
       memory += getsizeof(labels.storage())
-      if not transform is None:
-        tensor, labels = transform(tensor, labels)
+      if static_transform is not None:
+        tensor, labels = static_transform(tensor, labels)
       data.append(SegmentedDataset(tensor=tensor, labels=labels, window=window, stride=stride))
 
     self.data = ConcatDataset(data)
@@ -388,7 +385,12 @@ class LARa(Dataset):
     )
 
   def __getitem__(self, index):
-    return self.view(*self.data[index]) if self.view is not None else self.data[index]
+    item = self.data[index]
+    if self.dynamic_transform is not None:
+      item = self.dynamic_transform(*item)
+    if self.view is not None:
+      item = self.view(*item)
+    return item
 
   def __len__(self) -> int:
     return len(self.data)
