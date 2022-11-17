@@ -28,11 +28,23 @@ def default_config():
   max_epochs = 15
   loss_patience = 22
   validation_interval = 1 / 10
+  optimizer = 'Adam'
+
+  if optimizer == 'Adam':
+    lr = 1e-3
+    betas = (0.9, 0.999)
+    weight_decay = 0
+  elif optimizer == 'RMSProp':
+    lr = 1e-3
+    alpha = 0.99
+    weight_decay = 0.95
+    momentum = 0
 
 
 @ex.automain
 def main(window: int, stride: int, sample_frequency: int, batch_size: int, cnn_imu_blocks: int,
-         max_epochs: int, loss_patience: int, validation_interval: float, _run: Run):
+         max_epochs: int, loss_patience: int, validation_interval: float, _run: Run, optimizer: str,
+         **extra_hyper_params):
   # Setup datasets #################################################################################
   data = LARa(download=True,
               window=window,
