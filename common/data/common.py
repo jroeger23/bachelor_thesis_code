@@ -582,13 +582,13 @@ class BatchAdditiveGaussianNoise(Transform):
 
 class RangeNormalize(Transform):
 
-  def __init__(self, range_min: float = 0, range_max: float = 1, dim: int = 1) -> None:
+  def __init__(self, range_min: float = 0, range_max: float = 1, dim: int = 0) -> None:
     """Range normalize a batch along a dimension
 
     Args:
         range_min (float, optional): desired minimum batch value. Defaults to 0.
         range_max (float, optional): desired maximum batch value. Defaults to 1.
-        dim (int, optional): the dimension, along which the normalization takes place. Defaults to 1.
+        dim (int, optional): the dimension, along which the normalization takes place. Defaults to 0.
     """
     self.range_min = range_min
     self.range_max = range_max
