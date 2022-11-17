@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader, random_split
 
 from common.data import (CombineViews, ComposeTransforms, LabelDtypeTransform, LARa,
                          LARaClassLabelView, LARaOptions, LARaSplitIMUView, NaNToConstTransform,
-                         ResampleTransform)
+                         ResampleTransform, RangeNormalize, BatchAdditiveGaussianNoise)
 from common.model import CNNIMU
 from common.pl_components import MonitorAcc, MonitorWF1, SacredLogger, MonitorBatchTime
 from common.helper import parseMongoObserverArgs, getRunCheckpointDirectory
@@ -53,6 +53,10 @@ def main(window: int, stride: int, sample_frequency: int, batch_size: int, cnn_i
                   NaNToConstTransform(batch_constant=0, label_constant=7),
                   ResampleTransform(freq_in=100, freq_out=sample_frequency),
                   LabelDtypeTransform(dtype=torch.int64)
+              ]),
+              dynamic_transform=ComposeTransforms([
+                RangeNormalize(),
+                BatchAdditiveGaussianNoise(mu=0, sigma=0.01)
               ]),
               view=CombineViews(
                   batch_view=LARaSplitIMUView(locations=LARaSplitIMUView.allLocations()),
