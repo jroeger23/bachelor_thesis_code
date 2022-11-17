@@ -15,6 +15,27 @@ DEFAULT_MONGODB_CONFIG = {
 
 
 def parseMongoObserverArgs(file: Union[Path, str]) -> Mapping[str, Any]:
+  """Parse arguments for the MongoObserver
+
+  INI keys
+  [sacred_db]
+  host = 
+  db_name = 
+  user = 
+  password = 
+  auth_db = 
+  auth_mechanism = 
+
+  Args:
+      file (Union[Path, str]): the path or str pointing to the ini config
+
+  Raises:
+      FileNotFoundError: When the path is invalid (also creates a dummy config)
+      RuntimeError: If the config file misses some entries
+
+  Returns:
+      Mapping[str, Any]: dict of MongoObserver arguments
+  """
   path = Path(file) if isinstance(file, str) else file
 
   if not path.exists():
