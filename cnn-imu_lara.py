@@ -25,6 +25,8 @@ def default_config():
   sample_frequency = 30
   batch_size = 150
   cnn_imu_blocks = 3
+  cnn_imu_channels = 64
+  cnn_imu_fc_features = 256
   max_epochs = 50
   loss_patience = 22
   validation_interval = 1 / 10
@@ -43,6 +45,7 @@ def default_config():
 
 @ex.automain
 def main(window: int, stride: int, sample_frequency: int, batch_size: int, cnn_imu_blocks: int,
+        cnn_imu_channels: int, cnn_imu_fc_features : int,
          max_epochs: int, loss_patience: int, validation_interval: float, _run: Run, _config):
   # Setup datasets #################################################################################
   data = LARa(download=True,
@@ -100,6 +103,8 @@ def main(window: int, stride: int, sample_frequency: int, batch_size: int, cnn_i
   model = CNNIMU(n_blocks=cnn_imu_blocks,
                  imu_sizes=imu_sizes,
                  sample_length=window,
+                 fc_features=cnn_imu_fc_features,
+                 conv_channels=cnn_imu_channels,
                  n_classes=8,
                  **_config)
   trainer = pl.Trainer(max_epochs=max_epochs,
