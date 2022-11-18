@@ -23,13 +23,13 @@ def default_config():
   window = 100
   stride = 20
   sample_frequency = 30
-  batch_size = 150
-  cnn_imu_blocks = 3
+  batch_size = 400
+  cnn_imu_blocks = 2
   cnn_imu_channels = 64
   cnn_imu_fc_features = 256
   max_epochs = 50
-  loss_patience = 22
-  validation_interval = 1 / 10
+  loss_patience = 32
+  validation_interval = 1 / 5
   optimizer = 'Adam'
 
   if optimizer == 'Adam':
@@ -45,27 +45,39 @@ def default_config():
 
 @ex.automain
 def main(window: int, stride: int, sample_frequency: int, batch_size: int, cnn_imu_blocks: int,
-        cnn_imu_channels: int, cnn_imu_fc_features : int,
-         max_epochs: int, loss_patience: int, validation_interval: float, _run: Run, _config):
+         cnn_imu_channels: int, cnn_imu_fc_features: int, max_epochs: int, loss_patience: int,
+         validation_interval: float, _run: Run, _config):
   # Setup datasets #################################################################################
-  data = LARa(download=True,
-              window=window,
-              stride=stride,
-              opts=[LARaOptions.ALL_RUNS, LARaOptions.ALL_SUBJECTS],
-              static_transform=ComposeTransforms([
-                  NaNToConstTransform(batch_constant=0, label_constant=7),
-                  ResampleTransform(freq_in=100, freq_out=sample_frequency),
-                  LabelDtypeTransform(dtype=torch.int64)
-              ]),
-              dynamic_transform=ComposeTransforms([
-                RangeNormalize(),
-                BatchAdditiveGaussianNoise(mu=0, sigma=0.01)
-              ]),
-              view=CombineViews(
-                  batch_view=LARaSplitIMUView(locations=LARaSplitIMUView.allLocations()),
-                  labels_view=LARaClassLabelView()))
-
-  train_data, validation_data, test_data = random_split(dataset=data, lengths=[0.8, 0.12, 0.08])
+  dynamic_transform = ComposeTransforms(
+      [RangeNormalize(), BatchAdditiveGaussianNoise(mu=0, sigma=0.01)])
+  static_transform = ComposeTransforms([
+      NaNToConstTransform(batch_constant=0, label_constant=7),
+      ResampleTransform(freq_in=100, freq_out=sample_frequency),
+      LabelDtypeTransform(dtype=torch.int64)
+  ])
+  view = CombineViews(batch_view=LARaSplitIMUView(locations=LARaSplitIMUView.allLocations()),
+                      labels_view=LARaClassLabelView())
+  train_data = LARa(download=True,
+                    window=window,
+                    stride=stride,
+                    opts=[LARaOptions.DEFAULT_TRAIN_SET],
+                    static_transform=static_transform,
+                    dynamic_transform=dynamic_transform,
+                    view=view)
+  validation_data = LARa(download=True,
+                         window=window,
+                         stride=stride,
+                         opts=[LARaOptions.DEFAULT_VALIDATION_SET],
+                         static_transform=static_transform,
+                         dynamic_transform=dynamic_transform,
+                         view=view)
+  test_data = LARa(download=True,
+                   window=window,
+                   stride=stride,
+                   opts=[LARaOptions.DEFAULT_TEST_SET],
+                   static_transform=static_transform,
+                   dynamic_transform=dynamic_transform,
+                   view=view)
 
   # Setup data loaders #############################################################################
   train_loader = DataLoader(dataset=train_data, batch_size=batch_size, shuffle=True)

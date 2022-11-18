@@ -281,80 +281,83 @@ class LARa(Dataset):
     logger.info(f'  - Dynamic Transform {str(dynamic_transform)}',)
     logger.info(f'  - View {str(view)}',)
 
+    # little hacky
+    is_default = LARaOptions.DEFAULT_TEST_SET in opts or LARaOptions.DEFAULT_TRAIN_SET in opts or LARaOptions.DEFAULT_VALIDATION_SET in opts
+
     subjects = []
-    if LARaOptions.SUBJECT07 in opts or LARaOptions.ALL_SUBJECTS in opts:
+    if LARaOptions.SUBJECT07 in opts or LARaOptions.ALL_SUBJECTS in opts or LARaOptions.DEFAULT_TRAIN_SET in opts:
       subjects.append('S07')
-    if LARaOptions.SUBJECT08 in opts or LARaOptions.ALL_SUBJECTS in opts:
+    if LARaOptions.SUBJECT08 in opts or LARaOptions.ALL_SUBJECTS in opts or LARaOptions.DEFAULT_TRAIN_SET in opts:
       subjects.append('S08')
-    if LARaOptions.SUBJECT09 in opts or LARaOptions.ALL_SUBJECTS in opts:
+    if LARaOptions.SUBJECT09 in opts or LARaOptions.ALL_SUBJECTS in opts or LARaOptions.DEFAULT_TRAIN_SET in opts:
       subjects.append('S09')
-    if LARaOptions.SUBJECT10 in opts or LARaOptions.ALL_SUBJECTS in opts:
+    if LARaOptions.SUBJECT10 in opts or LARaOptions.ALL_SUBJECTS in opts or LARaOptions.DEFAULT_TRAIN_SET in opts:
       subjects.append('S10')
-    if LARaOptions.SUBJECT11 in opts or LARaOptions.ALL_SUBJECTS in opts:
+    if LARaOptions.SUBJECT11 in opts or LARaOptions.ALL_SUBJECTS in opts or LARaOptions.DEFAULT_VALIDATION_SET in opts:
       subjects.append('S11')
-    if LARaOptions.SUBJECT12 in opts or LARaOptions.ALL_SUBJECTS in opts:
+    if LARaOptions.SUBJECT12 in opts or LARaOptions.ALL_SUBJECTS in opts or LARaOptions.DEFAULT_VALIDATION_SET in opts:
       subjects.append('S12')
-    if LARaOptions.SUBJECT13 in opts or LARaOptions.ALL_SUBJECTS in opts:
+    if LARaOptions.SUBJECT13 in opts or LARaOptions.ALL_SUBJECTS in opts or LARaOptions.DEFAULT_TEST_SET in opts:
       subjects.append('S13')
-    if LARaOptions.SUBJECT14 in opts or LARaOptions.ALL_SUBJECTS in opts:
+    if LARaOptions.SUBJECT14 in opts or LARaOptions.ALL_SUBJECTS in opts or LARaOptions.DEFAULT_TEST_SET in opts:
       subjects.append('S14')
 
     runs = []
-    if LARaOptions.RUN01 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO1 in opts:
+    if LARaOptions.RUN01 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO1 in opts or is_default:
       runs.append('L01_SUBJECT_R01')
-    if LARaOptions.RUN02 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO1 in opts:
+    if LARaOptions.RUN02 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO1 in opts or is_default:
       runs.append('L01_SUBJECT_R02')
-    if LARaOptions.RUN03 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+    if LARaOptions.RUN03 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts or is_default:
       runs.append('L02_SUBJECT_R03')
-    if LARaOptions.RUN04 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+    if LARaOptions.RUN04 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts or is_default:
       runs.append('L02_SUBJECT_R04')
-    if LARaOptions.RUN05 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+    if LARaOptions.RUN05 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts or is_default:
       runs.append('L02_SUBJECT_R05')
-    if LARaOptions.RUN06 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+    if LARaOptions.RUN06 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts or is_default:
       runs.append('L02_SUBJECT_R06')
-    if LARaOptions.RUN07 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+    if LARaOptions.RUN07 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts or is_default:
       runs.append('L02_SUBJECT_R07')
-    if LARaOptions.RUN10 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+    if LARaOptions.RUN10 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts or is_default:
       runs.append('L02_SUBJECT_R10')
-    if LARaOptions.RUN11 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+    if LARaOptions.RUN11 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts or is_default:
       runs.append('L02_SUBJECT_R11')
-    if LARaOptions.RUN12 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+    if LARaOptions.RUN12 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts or is_default:
       runs.append('L02_SUBJECT_R12')
-    if LARaOptions.RUN13 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+    if LARaOptions.RUN13 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts or is_default:
       runs.append('L02_SUBJECT_R13')
-    if LARaOptions.RUN14 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+    if LARaOptions.RUN14 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts or is_default:
       runs.append('L02_SUBJECT_R14')
-    if LARaOptions.RUN15 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+    if LARaOptions.RUN15 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts or is_default:
       runs.append('L02_SUBJECT_R15')
-    if LARaOptions.RUN16 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts:
+    if LARaOptions.RUN16 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO2 in opts or is_default:
       runs.append('L02_SUBJECT_R16')
-    if LARaOptions.RUN17 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+    if LARaOptions.RUN17 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts or is_default:
       runs.append('L03_SUBJECT_R17')
-    if LARaOptions.RUN18 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+    if LARaOptions.RUN18 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts or is_default:
       runs.append('L03_SUBJECT_R18')
-    if LARaOptions.RUN19 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+    if LARaOptions.RUN19 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts or is_default:
       runs.append('L03_SUBJECT_R19')
-    if LARaOptions.RUN20 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+    if LARaOptions.RUN20 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts or is_default:
       runs.append('L03_SUBJECT_R20')
-    if LARaOptions.RUN21 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+    if LARaOptions.RUN21 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts or is_default:
       runs.append('L03_SUBJECT_R21')
-    if LARaOptions.RUN22 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+    if LARaOptions.RUN22 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts or is_default:
       runs.append('L03_SUBJECT_R22')
-    if LARaOptions.RUN23 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+    if LARaOptions.RUN23 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts or is_default:
       runs.append('L03_SUBJECT_R23')
-    if LARaOptions.RUN24 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+    if LARaOptions.RUN24 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts or is_default:
       runs.append('L03_SUBJECT_R24')
-    if LARaOptions.RUN25 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+    if LARaOptions.RUN25 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts or is_default:
       runs.append('L03_SUBJECT_R25')
-    if LARaOptions.RUN26 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+    if LARaOptions.RUN26 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts or is_default:
       runs.append('L03_SUBJECT_R26')
-    if LARaOptions.RUN27 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+    if LARaOptions.RUN27 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts or is_default:
       runs.append('L03_SUBJECT_R27')
-    if LARaOptions.RUN28 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+    if LARaOptions.RUN28 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts or is_default:
       runs.append('L03_SUBJECT_R28')
-    if LARaOptions.RUN29 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+    if LARaOptions.RUN29 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts or is_default:
       runs.append('L03_SUBJECT_R29')
-    if LARaOptions.RUN30 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts:
+    if LARaOptions.RUN30 in opts or LARaOptions.ALL_RUNS in opts or LARaOptions.SCENARIO3 in opts or is_default:
       runs.append('L03_SUBJECT_R30')
 
     memory = 0
