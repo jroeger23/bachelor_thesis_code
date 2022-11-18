@@ -192,8 +192,6 @@ class CNNIMU(pl.LightningModule):
         torch.nn.Linear(in_features=total_features, out_features=fc_features),
         torch.nn.ReLU(),
         torch.nn.Dropout(),
-        torch.nn.Linear(in_features=fc_features, out_features=fc_features),
-        torch.nn.ReLU(),
         torch.nn.Linear(in_features=fc_features, out_features=n_classes),
     )
 
