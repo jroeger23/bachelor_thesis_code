@@ -10,16 +10,17 @@ class CNNIMUBlock(pl.LightningModule):
   """ A CNN-IMU Block with two 5x1 convolutional layers and one 2x1 max-pooling layer for 64 channels.
   """
 
-  def __init__(self, first_block: bool = False):
+  def __init__(self, first_block: bool = False, conv_channels: int = 64):
     """ Create a CNNIMU Block
 
     Args:
         first_block (bool, optional): Marks this block as the first block in a Convolution Stack,
                                       meaning it has one input channel instead of 64.
                                       Defaults to False.
+        conv_channels (int, optional): The number of convolition channels. Defaults to 64.
     """
     super().__init__()
-    channels = 64
+    channels = conv_channels
     in_channels = 1 if first_block else channels
     self.conv1 = torch.nn.Conv2d(in_channels=in_channels,
                                  out_channels=channels,
@@ -68,15 +69,18 @@ class CNNIMUPipeline(pl.LightningModule):
   """A CNN-IMU IMU convolution stack consisting of n CNN-IMU blocks
   """
 
-  def __init__(self, n_blocks: int) -> None:
+  def __init__(self, n_blocks: int, conv_channels: int) -> None:
     """Create a new CNN-IMU colvolution stack
 
     Args:
         n_blocks (int): the number of CNN-IMU blocks to chain
+        conv_channels (int): the number of inner channels
     """
     super().__init__()
-    self.blocks = [CNNIMUBlock(first_block=False) for _ in range(n_blocks - 1)]
-    self.blocks.insert(0, CNNIMUBlock(first_block=True))
+    self.blocks = [
+        CNNIMUBlock(first_block=False, conv_channels=conv_channels) for _ in range(n_blocks - 1)
+    ]
+    self.blocks.insert(0, CNNIMUBlock(first_block=True, conv_channels=conv_channels))
     self.blocks = torch.nn.ModuleList(self.blocks)
 
   def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -137,9 +141,16 @@ class CNNIMU(pl.LightningModule):
   classified by a fully-connected softmax classifier.
   """
 
-  def __init__(self, n_blocks: int, imu_sizes: t.List[int], sample_length: int, n_classes: int,
+  def __init__(self,
+               n_blocks: int,
+               imu_sizes: t.List[int],
+               sample_length: int,
+               n_classes: int,
+               conv_channels: int = 64,
+               fc_features: int = 512,
                **extra_hyper_params) -> None:
-    """Create a new CNN-IMU. With a given block depth, IMU data columns and a sample length
+    """Create a new CNN-IMU. With a given block depth, IMU data columns, sample length,
+       number of convolution channels and a number of fully-connected features per layer
 
     Args:
         n_blocks (int): the number of CNN-IMU blocks per IMU
@@ -147,33 +158,51 @@ class CNNIMU(pl.LightningModule):
                                  forward() parameter
         sample_length (int): the length of all samples (T)
         n_classes (int): the number of output classes
+        conv_channels (int, optional): The number of conv channles to use in each block. Defaults to 64.
+        fc_features (int, optional): Number of fc_featues at each imu output and inside the classification
+                                     stack. Defaults to 512.
     """
     super().__init__()
     self.extra_hyper_params = extra_hyper_params
-    pipelines = [CNNIMUPipeline(n_blocks=n_blocks) for _ in imu_sizes]
 
+    # All IMU conv pipelines
+    pipelines = [CNNIMUPipeline(n_blocks=n_blocks, conv_channels=conv_channels) for _ in imu_sizes]
+
+    # Their output shapes
     pipe_output_shapes = [
         p.shape_transform((sample_length, d)) for p, d in zip(pipelines, imu_sizes)
     ]
-    fc_in = sum([t * d for t, d in pipe_output_shapes]) * 64
-    fc_width = 512
 
+    # The number of features
+    pipe_output_features = [t * d * conv_channels for t, d in pipe_output_shapes]
+
+    # The number of total features
+    total_features = len(imu_sizes) * fc_features
+
+    # Torch modules in order
     self.pipelines = torch.nn.ModuleList(pipelines)
+    self.pipe_fc = torch.nn.ModuleList([
+        torch.nn.Sequential(torch.nn.Flatten(),
+                            torch.nn.Linear(in_features=i, out_features=fc_features),
+                            torch.nn.ReLU()) for i in pipe_output_features
+    ])
     self.fuse = FuseModule()
     self.fc = torch.nn.Sequential(
         torch.nn.Dropout(),
-        torch.nn.Linear(in_features=fc_in, out_features=fc_width),
+        torch.nn.Linear(in_features=total_features, out_features=fc_features),
         torch.nn.ReLU(),
         torch.nn.Dropout(),
-        torch.nn.Linear(in_features=fc_width, out_features=fc_width),
+        torch.nn.Linear(in_features=fc_features, out_features=fc_features),
         torch.nn.ReLU(),
-        torch.nn.Linear(in_features=fc_width, out_features=n_classes),
+        torch.nn.Linear(in_features=fc_features, out_features=n_classes),
     )
 
     logger.info(f'Set up CNNIMU for {n_classes} classes with convolution setup:')
     for ix, (i_d, (o_t, o_d)) in enumerate(zip(imu_sizes, pipe_output_shapes)):
       logger.info(
-          f'  - IMU{ix} (T={sample_length}, D={i_d}) -> {n_blocks} blocks -> (T={o_t}, D={o_d})')
+          f'  - IMU{ix} (T={sample_length}, D={i_d}) -> {n_blocks} blocks -> (T={o_t}, D={o_d}, C={conv_channels})'
+      )
+    logger.info(f'And a fully-connected feature width of {fc_features}')
 
   def forward(self, imu_x: t.List[torch.Tensor]) -> torch.Tensor:
     """Forward pass a list of IMU data batches
@@ -185,7 +214,8 @@ class CNNIMU(pl.LightningModule):
         torch.Tensor: the prediction logits for each class
     """
     pipe_outputs = [p(x[:, None, :, :]) for p, x in zip(self.pipelines, imu_x)]
-    combined = self.fuse(pipe_outputs)
+    pipe_fc_outputs = [p_fc(p_o) for p_fc, p_o in zip(self.pipe_fc, pipe_outputs)]
+    combined = self.fuse(pipe_fc_outputs)
     y = self.fc(combined)
     return y
 
