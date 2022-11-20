@@ -6,6 +6,24 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def orthogonalInitialization(module, nonlinearity):
+  """Orthogonal initialize all linear and conv2d modules
+
+  Args:
+      module (_type_): the module to initialize (if not linear or conv2d, skip)
+      nonlinearity (_type_): the type of nonlinearity function in use. (see torch.nn.init.calculate_gain)
+  """
+  gain = torch.nn.init.calculate_gain(nonlinearity=nonlinearity)
+  if isinstance(module, torch.nn.Linear):
+    torch.nn.init.orthogonal_(module.weight.data, gain=gain)
+    if hasattr(module, 'bias') and isinstance(module.bias, torch.nn.Parameter):
+      torch.nn.init.constant_(module.bias.data, 0)
+  elif isinstance(module, torch.nn.Conv2d):
+    torch.nn.init.orthogonal_(module.weight.data, gain=gain)
+    if hasattr(module, 'bias') and isinstance(module.bias, torch.nn.Parameter):
+      torch.nn.init.constant_(module.bias.data, 0)
+
+
 class CNNIMUBlock(pl.LightningModule):
   """ A CNN-IMU Block with two 5x1 convolutional layers and one 2x1 max-pooling layer for 64 channels.
   """
@@ -148,6 +166,7 @@ class CNNIMU(pl.LightningModule):
                n_classes: int,
                conv_channels: int = 64,
                fc_features: int = 512,
+               weight_initialization: str = 'orthogonal',
                **extra_hyper_params) -> None:
     """Create a new CNN-IMU. With a given block depth, IMU data columns, sample length,
        number of convolution channels and a number of fully-connected features per layer
@@ -161,6 +180,7 @@ class CNNIMU(pl.LightningModule):
         conv_channels (int, optional): The number of conv channles to use in each block. Defaults to 64.
         fc_features (int, optional): Number of fc_featues at each imu output and inside the classification
                                      stack. Defaults to 512.
+        weight_initialization (str, optional): parameter initialization method. Defaults to 'orthogonal'.
     """
     super().__init__()
     self.extra_hyper_params = extra_hyper_params
@@ -195,12 +215,17 @@ class CNNIMU(pl.LightningModule):
         torch.nn.Linear(in_features=fc_features, out_features=n_classes),
     )
 
+    # Initialize weights
+    if weight_initialization == 'orthogonal':
+      self.apply(lambda m: orthogonalInitialization(m, 'relu'))
+
     logger.info(f'Set up CNNIMU for {n_classes} classes with convolution setup:')
     for ix, (i_d, (o_t, o_d)) in enumerate(zip(imu_sizes, pipe_output_shapes)):
       logger.info(
           f'  - IMU{ix} (T={sample_length}, D={i_d}) -> {n_blocks} blocks -> (T={o_t}, D={o_d}, C={conv_channels})'
       )
     logger.info(f'And a fully-connected feature width of {fc_features}')
+    logger.info(f'Weight Initialization Method: {weight_initialization}')
 
   def forward(self, imu_x: t.List[torch.Tensor]) -> torch.Tensor:
     """Forward pass a list of IMU data batches

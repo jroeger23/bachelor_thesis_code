@@ -31,6 +31,7 @@ def default_config():
   loss_patience = 32
   validation_interval = 1 / 5
   optimizer = 'Adam'
+  cnn_imu_weight_initialization = 'orthogonal'
 
   if optimizer == 'Adam':
     lr = 1e-3
@@ -46,7 +47,7 @@ def default_config():
 @ex.automain
 def main(window: int, stride: int, sample_frequency: int, batch_size: int, cnn_imu_blocks: int,
          cnn_imu_channels: int, cnn_imu_fc_features: int, max_epochs: int, loss_patience: int,
-         validation_interval: float, _run: Run, _config):
+         validation_interval: float, cnn_imu_weight_initialization: str, _run: Run, _config):
   # Setup datasets #################################################################################
   dynamic_transform = ComposeTransforms(
       [RangeNormalize(), BatchAdditiveGaussianNoise(mu=0, sigma=0.01)])
@@ -118,6 +119,7 @@ def main(window: int, stride: int, sample_frequency: int, batch_size: int, cnn_i
                  fc_features=cnn_imu_fc_features,
                  conv_channels=cnn_imu_channels,
                  n_classes=8,
+                 initialization=cnn_imu_weight_initialization,
                  **_config)
   trainer = pl.Trainer(max_epochs=max_epochs,
                        accelerator='auto',
