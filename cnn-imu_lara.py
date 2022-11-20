@@ -8,7 +8,8 @@ from torch.utils.data import DataLoader
 
 from common.data import (CombineViews, ComposeTransforms, LabelDtypeTransform, LARa,
                          LARaClassLabelView, LARaOptions, LARaSplitIMUView, NaNToConstTransform,
-                         ResampleTransform, BatchAdditiveGaussianNoise, MeanVarianceNormalize)
+                         ResampleTransform, BatchAdditiveGaussianNoise, MeanVarianceNormalize,
+                         ClipSampleRange)
 from common.model import CNNIMU
 from common.pl_components import MonitorAcc, MonitorWF1, SacredLogger, MonitorBatchTime
 from common.helper import parseMongoObserverArgs, getRunCheckpointDirectory
@@ -54,7 +55,8 @@ def main(window: int, stride: int, sample_frequency: int, batch_size: int, cnn_i
       NaNToConstTransform(sample_constant=0, label_constant=7),
       ResampleTransform(freq_in=100, freq_out=sample_frequency),
       LabelDtypeTransform(dtype=torch.int64),
-      MeanVarianceNormalize(mean=0, variance=1)
+      MeanVarianceNormalize(mean=0.5, variance=1),
+      ClipSampleRange(range_min=0, range_max=1)
   ])
   view = CombineViews(sample_view=LARaSplitIMUView(locations=LARaSplitIMUView.allLocations()),
                       label_view=LARaClassLabelView())

@@ -653,6 +653,19 @@ class MeanVarianceNormalize(Transform):
   def __str__(self) -> str:
     return f'MeanVarianceNormalize(mean={self.mean}, variance={self.variance}, dim={self.dim})'
 
+class ClipSampleRange(Transform):
+  def __init__(self, range_min : float = 0, range_max : float = 1) -> None:
+    self.range_min = range_min
+    self.range_max = range_max
+
+  def __call__(self, sample: torch.Tensor, label: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    sample[sample < self.range_min] = self.range_min
+    sample[sample > self.range_max] = self.range_max
+
+    return sample, label
+
+  def __str__(self) -> str:
+    return f'ClipSampleRange(range_min={self.range_min}, range_max={self.range_max}'
 
 class SegmentedDataset(Dataset):
   """A Dataset wrapper that segments the underlying dataset
