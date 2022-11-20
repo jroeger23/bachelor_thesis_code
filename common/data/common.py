@@ -481,6 +481,31 @@ class NaNToConstTransform(Transform):
     return f'NaNToConst (sample_nan={self.sample_constant}, label_nan={self.label_constant})'
 
 
+class RemoveSampleNanRows(Transform):
+
+  def __init__(self) -> None:
+    """Remove all nan rows from a sample/label pair
+    """
+    super().__init__()
+
+  def __call__(self, sample: torch.Tensor,
+               label: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    """Apply remove nan rows
+
+    Args:
+        sample (torch.Tensor): the sample to filter
+        label (torch.Tensor): the labels to filter
+
+    Returns:
+        t.Tuple[torch.Tensor, torch.Tensor]: sample (no nan values), label (for all kept sample rows)
+    """
+    keep_cond = torch.any(sample.isnan(), dim=1, keepdim=False).logical_not()
+    return sample[keep_cond, :], label[keep_cond, :]
+
+  def __str__(self) -> str:
+    return 'RemoveSampleNanRows()'
+
+
 class LabelDtypeTransform(Transform):
   """Transform the datatype of labels
   """
@@ -653,12 +678,15 @@ class MeanVarianceNormalize(Transform):
   def __str__(self) -> str:
     return f'MeanVarianceNormalize(mean={self.mean}, variance={self.variance}, dim={self.dim})'
 
+
 class ClipSampleRange(Transform):
-  def __init__(self, range_min : float = 0, range_max : float = 1) -> None:
+
+  def __init__(self, range_min: float = 0, range_max: float = 1) -> None:
     self.range_min = range_min
     self.range_max = range_max
 
-  def __call__(self, sample: torch.Tensor, label: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+  def __call__(self, sample: torch.Tensor,
+               label: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
     sample[sample < self.range_min] = self.range_min
     sample[sample > self.range_max] = self.range_max
 
@@ -666,6 +694,7 @@ class ClipSampleRange(Transform):
 
   def __str__(self) -> str:
     return f'ClipSampleRange(range_min={self.range_min}, range_max={self.range_max}'
+
 
 class SegmentedDataset(Dataset):
   """A Dataset wrapper that segments the underlying dataset
