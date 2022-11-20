@@ -96,10 +96,10 @@ class LARaLabelsView(View):
     self.entries = entries
     self.indices = [labels_view_indices[e] for e in entries]
 
-  def __call__(self, batch: torch.Tensor,
-               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
-    labels = torch.atleast_2d(labels)
-    return batch, labels[:, self.indices].squeeze()
+  def __call__(self, sample: torch.Tensor,
+               label: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    label = torch.atleast_2d(label)
+    return sample, label[:, self.indices].squeeze()
 
   def __str__(self) -> str:
     return f'LARaLabelsView({self.entries})'
@@ -111,10 +111,10 @@ class LARaDataView(View):
     self.entries = entries
     self.indices = [data_view_indices[e] - 1 for e in entries]  # adjust for trimmed time
 
-  def __call__(self, batch: torch.Tensor,
-               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
-    batch = torch.atleast_2d(batch)
-    return batch[:, self.indices], labels
+  def __call__(self, sample: torch.Tensor,
+               label: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    sample = torch.atleast_2d(sample)
+    return sample[:, self.indices], label
 
   @staticmethod
   def allEntries() -> t.List[str]:
@@ -129,9 +129,9 @@ class LARaClassLabelView(View):
   def __init__(self):
     self.view = LARaLabelsView(entries=['Class'])
 
-  def __call__(self, batch: torch.Tensor,
-               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
-    return self.view(batch, labels)
+  def __call__(self, sample: torch.Tensor,
+               label: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    return self.view(sample, label)
 
   @staticmethod
   def allEntries() -> t.List[str]:
@@ -152,9 +152,9 @@ class LARaIMUView(View):
     entries = [l + s for l, s in product(locations, suffixes)]
     self.view = LARaDataView(entries=entries)
 
-  def __call__(self, batch: torch.Tensor,
-               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
-    return self.view(batch, labels)
+  def __call__(self, sample: torch.Tensor,
+               label: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    return self.view(sample, label)
 
   @staticmethod
   def allLocations() -> t.List[str]:
@@ -175,18 +175,18 @@ class LARaSplitIMUView(View):
     self.locations = locations
     self.views = [LARaIMUView(locations=[l]) for l in locations]
 
-  def __call__(self, batch: torch.Tensor,
-               labels: torch.Tensor) -> t.Tuple[t.List[torch.Tensor], torch.Tensor]:
+  def __call__(self, sample: torch.Tensor,
+               label: torch.Tensor) -> t.Tuple[t.List[torch.Tensor], torch.Tensor]:
     """Apply the view
 
     Args:
-        batch (torch.Tensor): the batch to view
-        labels (torch.Tensor): the labels to view
+        sample (torch.Tensor): the sample to view
+        label (torch.Tensor): the label to view
 
     Returns:
         _type_: 
     """
-    return [v(batch, torch.Tensor())[0] for v in self.views], labels
+    return [v(sample, torch.Tensor())[0] for v in self.views], label
 
   def __str__(self) -> str:
     return f'LARaSplitIMUView({self.locations})'
@@ -261,6 +261,20 @@ class LARa(Dataset):
                view: t.Optional[View] = None,
                download: bool = True,
                opts: t.Iterable[LARaOptions] = []):
+    """Load LARa Dataset.
+
+    Args:
+        root (str, optional): root folder (a LARa folder will be in there). Defaults to './data'.
+        window (int, optional): the segmentation window size. Defaults to 24.
+        stride (int, optional): the stride used by the segmentation. Defaults to 12.
+        static_transform (t.Optional[Transform], optional): a static transformation, which is applied at each
+                                                            imu data file, before segmentation (not cached). Defaults to None.
+        dynamic_transform (t.Optional[Transform], optional): a dynamic transform, which is applied on the fly by the __getitem__
+                                                             method. Defaults to None.
+        view (t.Optional[View], optional): A view, which is applied before outputting elements. Defaults to None.
+        download (bool, optional): Download the dataset (to root/LARa.zip). Defaults to True.
+        opts (t.Iterable[LARaOptions], optional): A list of LARa options defining the subset to load. Defaults to [].
+    """
     self.dataset_name = 'LARa'
     self.zip_dirs = ['IMU data/']
     self.root = os.path.join(root, self.dataset_name, 'IMU data')

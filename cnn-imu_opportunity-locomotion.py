@@ -22,8 +22,8 @@ def main():
                          LabelDtypeTransform(dtype=torch.int64),
                          OpportunityLocomotionLabelAdjustMissing3()
                      ]),
-                     view=CombineViews(batch_view=OpportunityHumanSensorUnitsView(),
-                                       labels_view=OpportunityLocomotionLabelView()),
+                     view=CombineViews(sample_view=OpportunityHumanSensorUnitsView(),
+                                       label_view=OpportunityLocomotionLabelView()),
                      download=True,
                      opts=[OpportunityOptions.ALL_SUBJECTS, OpportunityOptions.ALL_ADL])
 

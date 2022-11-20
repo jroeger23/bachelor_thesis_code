@@ -318,12 +318,12 @@ class View():
   """The View interface
   """
 
-  def __call__(self, batch: torch.Tensor, labels: torch.Tensor) -> t.Any:
+  def __call__(self, sample: torch.Tensor, label: torch.Tensor) -> t.Any:
     """Apply a view
 
     Args:
-        batch (torch.Tensor): batch to view
-        labels (torch.Tensor): label to view
+        sample (torch.Tensor): sample to view
+        label (torch.Tensor): label to view
 
     Raises:
         NotImplementedError: Interface
@@ -349,19 +349,19 @@ class Transform():
   """The Transform interface
   """
 
-  def __call__(self, batch: torch.Tensor,
-               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+  def __call__(self, sample: torch.Tensor,
+               label: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
     """Apply this transformation
 
     Args:
-        batch (torch.Tensor): the batch to transform
-        labels (torch.Tensor): the label to transform
+        sample (torch.Tensor): the sample to transform
+        label (torch.Tensor): the label to transform
 
     Raises:
         NotImplementedError: interface
 
     Returns:
-        t.Tuple[torch.Tensor, torch.Tensor]: (transformed batch, transformed labels)
+        t.Tuple[torch.Tensor, torch.Tensor]: (transformed sample, transformed label)
     """
     raise NotImplementedError()
 
@@ -389,21 +389,21 @@ class ComposeTransforms(Transform):
     """
     self.transforms = transforms
 
-  def __call__(self, batch: torch.Tensor,
-               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+  def __call__(self, sample: torch.Tensor,
+               label: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
     """Apply all transformations
 
     Args:
-        batch (torch.Tensor): the batch to transform
-        labels (torch.Tensor): the labels to transform
+        sample (torch.Tensor): the sample to transform
+        label (torch.Tensor): the label to transform
 
     Returns:
         t.Tuple[torch.Tensor, torch.Tensor]: (transformed batch, transformed labels)
     """
     for t in self.transforms:
-      batch, labels = t(batch, labels)
+      sample, label = t(sample, label)
 
-    return batch, labels
+    return sample, label
 
   def __str__(self) -> str:
     """Describe this transform
@@ -422,63 +422,63 @@ class CombineViews(View):
   """Combine two Views
   """
 
-  def __init__(self, batch_view: View, labels_view: View):
+  def __init__(self, sample_view: View, label_view: View):
     """New CombineViews
 
     Args:
-        batch_view (View): the batch view
-        labels_view (View): the labels view
+        sample_view (View): the sample view
+        label_view (View): the label view
     """
-    self.batch_view = batch_view
-    self.labels_view = labels_view
+    self.sample_view = sample_view
+    self.label_view = label_view
 
-  def __call__(self, batch: torch.Tensor, labels: torch.Tensor) -> t.Any:
+  def __call__(self, sample: torch.Tensor, lable: torch.Tensor) -> t.Any:
     """Apply both views
 
     Args:
-        batch (torch.Tensor): the batch to view
-        labels (torch.Tensor): the labels to view
+        sample (torch.Tensor): the sample to view
+        label (torch.Tensor): the label to view
 
     Returns:
         t.Any: view output
     """
-    return self.labels_view(*self.batch_view(batch, labels))
+    return self.label_view(*self.sample_view(sample, lable))
 
   def __str__(self) -> str:
-    return f'CombineViews \n\t[\n\t  Batch:  {str(self.batch_view)}\n\t  Labels: {str(self.labels_view)}\n\t]'
+    return f'CombineViews \n\t[\n\t  Sample:  {str(self.sample_view)}\n\t  Label: {str(self.label_view)}\n\t]'
 
 
 class NaNToConstTransform(Transform):
   """A Transformation, which replaces all NaN values with a constant
   """
 
-  def __init__(self, batch_constant=0, label_constant=0):
+  def __init__(self, sample_constant=0, label_constant=0):
     """Choose the constants for batch and label
 
     Args:
-        batch_constant (int, optional): batch constant . Defaults to 0.
+        sample_constant (int, optional): sample constant . Defaults to 0.
         label_constant (int, optional): labels constant . Defaults to 0.
     """
-    self.batch_constant = batch_constant
+    self.sample_constant = sample_constant
     self.label_constant = label_constant
 
-  def __call__(self, batch: torch.Tensor,
-               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+  def __call__(self, sample: torch.Tensor,
+               label: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
     """Apply NaN to const transformation
 
     Args:
-        batch (torch.Tensor): the batches to transform
-        labels (torch.Tensor): the labels to transform
+        sample (torch.Tensor): the sample to transform
+        label (torch.Tensor): the label to transform
 
     Returns:
         t.Tuple[torch.Tensor, torch.Tensor]: nan replaced inputs
     """
-    return torch.nan_to_num(input=batch,
-                            nan=self.batch_constant), torch.nan_to_num(input=labels,
-                                                                       nan=self.label_constant)
+    return torch.nan_to_num(input=sample,
+                            nan=self.sample_constant), torch.nan_to_num(input=label,
+                                                                        nan=self.label_constant)
 
   def __str__(self) -> str:
-    return f'NaNToConst (batch_nan={self.batch_constant}, label_nan={self.label_constant})'
+    return f'NaNToConst (sample_nan={self.sample_constant}, label_nan={self.label_constant})'
 
 
 class LabelDtypeTransform(Transform):
@@ -493,18 +493,18 @@ class LabelDtypeTransform(Transform):
     """
     self.dtype = dtype
 
-  def __call__(self, batch: torch.Tensor,
-               labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+  def __call__(self, sample: torch.Tensor,
+               label: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
     """Apply dtype transformation
 
     Args:
-        batch (torch.Tensor): unchanged
-        labels (torch.Tensor): the labels to transform
+        sample (torch.Tensor): unchanged
+        label (torch.Tensor): the label to transform
 
     Returns:
-        t.Tuple[torch.Tensor, torch.Tensor]: batch, labels(as dtype)
+        t.Tuple[torch.Tensor, torch.Tensor]: sample, label(as dtype)
     """
-    return batch, labels.type(dtype=self.dtype)
+    return sample, label.type(dtype=self.dtype)
 
   def __str__(self) -> str:
     return f'LabelDtypeTransform {self.dtype}'
@@ -524,25 +524,26 @@ class ResampleTransform(Transform):
     self.freq_in = freq_in
     self.freq_out = freq_out
 
-  def __call__(self, batch: torch.Tensor,
+  def __call__(self, sample: torch.Tensor,
                labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
     """Apply re-sampling to a sequence of data
 
     Args:
-        batch (torch.Tensor): the sequence of datapoints (N x D)
-        labels (torch.Tensor): the sequence of labels (N x L)
+        sample (torch.Tensor): the sequence of datapoints (N x D)
+        label (torch.Tensor): the sequence of labels (N x L)
 
     Returns:
         t.Tuple[torch.Tensor, torch.Tensor]: resampled batch (N' x D), resampled labels (N' x L)
     """
     ratio = self.freq_out / self.freq_in
-    fb = tuple([ratio] + [1 for _ in range(batch.ndim - 1)])
+    fb = tuple([ratio] + [1 for _ in range(sample.ndim - 1)])
     fl = tuple([ratio] + [1 for _ in range(labels.ndim - 1)])
-    batch = torch.nn.functional.interpolate(input=batch.unsqueeze(0).unsqueeze(0), scale_factor=fb)
+    sample = torch.nn.functional.interpolate(input=sample.unsqueeze(0).unsqueeze(0),
+                                             scale_factor=fb)
     labels = torch.nn.functional.interpolate(input=labels.unsqueeze(0).unsqueeze(0),
                                              scale_factor=fl)
 
-    return batch.squeeze(), labels.squeeze()
+    return sample.squeeze(), labels.squeeze()
 
   def __str__(self) -> str:
     return f'DownsampleTransform (f_in={self.freq_in}, f_out={self.freq_out})'
@@ -561,20 +562,20 @@ class BatchAdditiveGaussianNoise(Transform):
     self.sigma = sigma
     self.normal = torch.distributions.Normal(loc=self.mu, scale=self.sigma)
 
-  def __call__(self, batch: torch.Tensor,
+  def __call__(self, sample: torch.Tensor,
                labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
-    """Apply gaussian noise to the batch
+    """Apply gaussian noise to the sample
 
     Args:
-        batch (torch.Tensor): the batch to transform
-        labels (torch.Tensor): the labels (untouched)
+        sample (torch.Tensor): the sample to transform
+        label (torch.Tensor): the label (untouched)
 
     Returns:
-        t.Tuple[torch.Tensor, torch.Tensor]: batch + noise, labels
+        t.Tuple[torch.Tensor, torch.Tensor]: sample + noise, label
     """
-    noise = self.normal.sample(sample_shape=batch.shape)
+    noise = self.normal.sample(sample_shape=sample.shape)
 
-    return batch + noise, labels
+    return sample + noise, labels
 
   def __str__(self) -> str:
     return f'BatchAdditiveGaussianNoise(mu={self.mu}, sigma={self.sigma})'
@@ -583,34 +584,34 @@ class BatchAdditiveGaussianNoise(Transform):
 class RangeNormalize(Transform):
 
   def __init__(self, range_min: float = 0, range_max: float = 1, dim: int = 0) -> None:
-    """Range normalize a batch along a dimension
+    """Range normalize a sample along a dimension
 
     Args:
-        range_min (float, optional): desired minimum batch value. Defaults to 0.
-        range_max (float, optional): desired maximum batch value. Defaults to 1.
+        range_min (float, optional): desired minimum sample value. Defaults to 0.
+        range_max (float, optional): desired maximum sample value. Defaults to 1.
         dim (int, optional): the dimension, along which the normalization takes place. Defaults to 0.
     """
     self.range_min = range_min
     self.range_max = range_max
     self.dim = dim
 
-  def __call__(self, batch: torch.Tensor,
+  def __call__(self, sample: torch.Tensor,
                labels: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
-    """Apply batch range normalization
+    """Apply sample range normalization
 
     Args:
-        batch (torch.Tensor): the batch to transform
-        labels (torch.Tensor): the labels to transform (untouched)
+        sample (torch.Tensor): the sample to transform
+        label (torch.Tensor): the label to transform (untouched)
 
     Returns:
-        t.Tuple[torch.Tensor, torch.Tensor]: range normalied batch, labels
+        t.Tuple[torch.Tensor, torch.Tensor]: range normalied sample, labels
     """
-    batch -= batch.amin(dim=self.dim, keepdim=True)  # Align zero
-    batch /= batch.amax(dim=self.dim, keepdim=True)  # Unit size
-    batch *= (self.range_max - self.range_min)  # Scale
-    batch += self.range_min  # Shift zero
+    sample -= sample.amin(dim=self.dim, keepdim=True)  # Align zero
+    sample /= sample.amax(dim=self.dim, keepdim=True)  # Unit size
+    sample *= (self.range_max - self.range_min)  # Scale
+    sample += self.range_min  # Shift zero
 
-    return batch, labels
+    return sample, labels
 
   def __str__(self) -> str:
     return f'RangeNormalize(range_min={self.range_min}, range_max={self.range_max}, dim={self.dim})'

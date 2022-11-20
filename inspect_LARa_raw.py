@@ -5,8 +5,8 @@ from common.data import (BatchAdditiveGaussianNoise, LARa, LARaClassLabelView, L
 
 validation_data = LARa(window=300,
                        stride=300,
-                       view=CombineViews(batch_view=LARaIMUView(['N']),
-                                         labels_view=LARaClassLabelView()),
+                       view=CombineViews(sample_view=LARaIMUView(['N']),
+                                         label_view=LARaClassLabelView()),
                        dynamic_transform=BatchAdditiveGaussianNoise(mu=0, sigma=1e-2),
                        opts=[LARaOptions.ALL_RUNS, LARaOptions.ALL_SUBJECTS])
 

@@ -52,12 +52,12 @@ def main(window: int, stride: int, sample_frequency: int, batch_size: int, cnn_i
   dynamic_transform = ComposeTransforms(
       [RangeNormalize(), BatchAdditiveGaussianNoise(mu=0, sigma=0.01)])
   static_transform = ComposeTransforms([
-      NaNToConstTransform(batch_constant=0, label_constant=7),
+      NaNToConstTransform(sample_constant=0, label_constant=7),
       ResampleTransform(freq_in=100, freq_out=sample_frequency),
       LabelDtypeTransform(dtype=torch.int64)
   ])
-  view = CombineViews(batch_view=LARaSplitIMUView(locations=LARaSplitIMUView.allLocations()),
-                      labels_view=LARaClassLabelView())
+  view = CombineViews(sample_view=LARaSplitIMUView(locations=LARaSplitIMUView.allLocations()),
+                      label_view=LARaClassLabelView())
   train_data = LARa(download=True,
                     window=window,
                     stride=stride,
