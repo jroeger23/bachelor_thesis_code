@@ -261,6 +261,41 @@ class Pamap2SplitIMUView(View):
     return list(Pamap2IMUView.allLocations())
 
 
+class Pamap2FilterRowsByLabel(Transform):
+
+  def __init__(self, keep_labels : t.List[int]) -> None:
+    """Remove all rows, which are not labeled with any of the keep_labels
+
+    Args:
+        keep_labels (t.List[int]): the labels to keep
+    """
+    self.keep_labels = keep_labels
+
+  def __call__(self, sample: torch.Tensor,
+               label: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    """Apply the row filter
+
+    Args:
+        sample (torch.Tensor): the sample
+        label (torch.Tensor): the label list for each time step of the sample
+
+    Returns:
+        t.Tuple[torch.Tensor, torch.Tensor]: sample (filtered), label(filtered)
+    """
+    label_tensor = torch.zeros(size=(len(label), len(self.keep_labels)))
+    label_tensor[:] = label[:, None]
+
+    options = torch.Tensor(self.keep_labels)[None, :]
+    options_tensor = torch.zeros(size=label_tensor.size())
+    options_tensor[:] = options
+
+    keep_cond = (label_tensor == options_tensor).any(dim=1)
+
+    return sample[keep_cond], label[keep_cond]
+
+  def __str__(self) -> str:
+    return f'Pamap2FilterRowsByLabel(keep_labels={self.keep_labels})'
+
 class Pamap2Options(Enum):
   SUBJECT1 = 1
   SUBJECT2 = 2
