@@ -617,6 +617,43 @@ class RangeNormalize(Transform):
     return f'RangeNormalize(range_min={self.range_min}, range_max={self.range_max}, dim={self.dim})'
 
 
+class MeanVarianceNormalize(Transform):
+
+  def __init__(self, mean: float = 0, variance: float = 1, dim: int = 0) -> None:
+    """Mean/Varaince normalize a sample
+
+    Args:
+        mean (float, optional): target mean. Defaults to 0.
+        variance (float, optional): target variance. Defaults to 1.
+        dim (int, optional): the dimension, along which the normalization will be calculated. Defaults to 0.
+    """
+    self.mean = mean
+    self.variance = variance
+    self.dim = dim
+
+  def __call__(self, sample: torch.Tensor,
+               label: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    """Apply the mean/variance normalization
+
+    Args:
+        sample (torch.Tensor): the sample to normalize
+        label (torch.Tensor): the label (untouched)
+
+    Returns:
+        t.Tuple[torch.Tensor, torch.Tensor]: normalized sample, label
+    """
+
+    sample -= sample.mean(dim=self.dim, keepdim=True)  # Zero mean
+    sample /= sample.std(dim=self.dim, keepdim=True)  # Unit variance
+    sample *= self.variance**0.5  # Scale to new variance
+    sample += self.mean  # Shift to new mean
+
+    return sample, label
+
+  def __str__(self) -> str:
+    return f'MeanVarianceNormalize(mean={self.mean}, variance={self.variance}, dim={self.dim})'
+
+
 class SegmentedDataset(Dataset):
   """A Dataset wrapper that segments the underlying dataset
   """
