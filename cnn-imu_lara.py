@@ -4,11 +4,11 @@ import torch
 from sacred.observers import MongoObserver
 from sacred.run import Run
 from pytorch_lightning import callbacks as pl_cb
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
 
 from common.data import (CombineViews, ComposeTransforms, LabelDtypeTransform, LARa,
                          LARaClassLabelView, LARaOptions, LARaSplitIMUView, NaNToConstTransform,
-                         ResampleTransform, RangeNormalize, BatchAdditiveGaussianNoise)
+                         ResampleTransform, BatchAdditiveGaussianNoise)
 from common.model import CNNIMU
 from common.pl_components import MonitorAcc, MonitorWF1, SacredLogger, MonitorBatchTime
 from common.helper import parseMongoObserverArgs, getRunCheckpointDirectory
@@ -49,8 +49,7 @@ def main(window: int, stride: int, sample_frequency: int, batch_size: int, cnn_i
          cnn_imu_channels: int, cnn_imu_fc_features: int, max_epochs: int, loss_patience: int,
          validation_interval: float, cnn_imu_weight_initialization: str, _run: Run, _config):
   # Setup datasets #################################################################################
-  dynamic_transform = ComposeTransforms(
-      [RangeNormalize(), BatchAdditiveGaussianNoise(mu=0, sigma=0.01)])
+  dynamic_transform = ComposeTransforms([BatchAdditiveGaussianNoise(mu=0, sigma=0.01)])
   static_transform = ComposeTransforms([
       NaNToConstTransform(sample_constant=0, label_constant=7),
       ResampleTransform(freq_in=100, freq_out=sample_frequency),
