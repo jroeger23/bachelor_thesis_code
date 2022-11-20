@@ -22,7 +22,7 @@ ex.observers.append(MongoObserver.create(**parseMongoObserverArgs('./config.ini'
 @ex.config
 def default_config():
   window = 100
-  stride = 20
+  stride = 12
   sample_frequency = 30
   batch_size = 400
   cnn_imu_blocks = 2
