@@ -158,7 +158,7 @@ class Pamap2View(View):
                                              unchanged labels
     """
     batch = torch.atleast_2d(batch)
-    return batch[:, self.indices].squeeze(), labels
+    return batch[:, self.indices], labels
 
   def __str__(self) -> str:
     return f'Pamap2View({self.entries})'
@@ -188,8 +188,8 @@ class Pamap2IMUView(View):
     self.with_heart_rate = with_heart_rate
     suffixes = [
         '_temp', '_acc1_x', '_acc1_y', '_acc1_z', '_acc2_x', '_acc2_y', '_acc2_z', '_gyro_x',
-        '_gyro_y', '_gyro_z', '_magn_x', '_magn_y', '_magn_z', '_orient1', '_orient2', '_orient3',
-        '_orient4'
+        '_gyro_y', '_gyro_z', '_magn_x', '_magn_y', '_magn_z'
+        #'_orient1', '_orient2', '_orient3', '_orient4' # Invalid in this data collection
     ]
     entries = [l + s for l, s in product(locations, suffixes)]
     if with_heart_rate:
@@ -263,13 +263,19 @@ class Pamap2SplitIMUView(View):
 
 class Pamap2FilterRowsByLabel(Transform):
 
-  def __init__(self, keep_labels : t.List[int]) -> None:
+  def __init__(self, keep_labels: t.List[int], remap: bool = True) -> None:
     """Remove all rows, which are not labeled with any of the keep_labels
 
     Args:
-        keep_labels (t.List[int]): the labels to keep
+        keep_labels (t.List[int]): the labels to keep (will be sorted asc)
+        remap (bool, optional): remap the labels to be in range [0..] maintaining the original order.
+                                Defaults to True.
     """
+    keep_labels.sort()
     self.keep_labels = keep_labels
+
+    self.label_remap = {orig: new for orig, new in zip(keep_labels, range(len(labels_map)))
+                       } if remap else None
 
   def __call__(self, sample: torch.Tensor,
                label: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
@@ -282,16 +288,27 @@ class Pamap2FilterRowsByLabel(Transform):
     Returns:
         t.Tuple[torch.Tensor, torch.Tensor]: sample (filtered), label(filtered)
     """
+    # Put label in each column of label_tensor
     label_tensor = torch.zeros(size=(len(label), len(self.keep_labels)))
     label_tensor[:] = label[:, None]
 
+    # Create options and fill them in each row of options_tensor
     options = torch.Tensor(self.keep_labels)[None, :]
     options_tensor = torch.zeros(size=label_tensor.size())
     options_tensor[:] = options
 
+    # check if label is any of the options
     keep_cond = (label_tensor == options_tensor).any(dim=1)
 
-    return sample[keep_cond], label[keep_cond]
+    # filter
+    sample = sample[keep_cond]
+    label = label[keep_cond]
+
+    # remap labels to [0...k]
+    if self.label_remap is not None:
+      label.apply_(lambda i: self.label_remap[i])
+
+    return sample, label
 
   def __str__(self) -> str:
     return f'Pamap2FilterRowsByLabel(keep_labels={self.keep_labels})'
@@ -313,6 +330,9 @@ class Pamap2InterpolateHeartrate(Transform):
     return sample, label
 
   def __str__(self) -> str:
+    return f'Pamap2InterpolateHeartrate(mode={self.mode})'
+
+
 class Pamap2Options(Enum):
   SUBJECT1 = 1
   SUBJECT2 = 2
@@ -337,15 +357,32 @@ class Pamap2(Dataset):
 
   def __init__(self,
                root: str = './data',
-               window: int = 24,
-               stride: int = 12,
+               window: int = 300,
+               stride: int = 66,
+               static_transform: t.Optional[Transform] = None,
+               dynamic_transform: t.Optional[Transform] = None,
                view: t.Optional[View] = None,
-               transform: t.Optional[Transform] = None,
                download: bool = True,
                opts: t.Iterable[Pamap2Options] = []):
+    """Load the Pamap2 Dataset.
+
+    Args:
+        root (str, optional): root folder which eventually contains Pamap2 subfolder. Defaults to './data'.
+        window (int, optional): the segmentation windows size. Defaults to 300.
+        stride (int, optional): the segmentation window stride. Defaults to 66.
+        static_transform (t.Optional[Transform], optional): a static transform to apply to the raw data
+                                                            (split by dataset file) before segmentation is done.
+                                                            Defaults to None.
+        dynamic_transform (t.Optional[Transform], optional): a dynamic transform to apply on each segment on __getitem__.
+                                                             Defaults to None.
+        view (t.Optional[View], optional): a view to apply after dynamic_transform. Defaults to None.
+        download (bool, optional): download the dataset (to root/pamap2.zip). Defaults to True.
+        opts (t.Iterable[Pamap2Options], optional): pamap2 subset options. Defaults to [].
+    """
     self.dataset_name = 'pamap2'
     self.zip_dirs = ['PAMAP2_Dataset/Protocol/', 'PAMAP2_Dataset/Optional/']
     self.root = os.path.join(root, self.dataset_name, 'PAMAP2_Dataset')
+    self.dynamic_transform = dynamic_transform
     self.view = view
 
     if download:
@@ -358,7 +395,8 @@ class Pamap2(Dataset):
     logger.info(f'Loading Pamap2 Dataset...')
     logger.info(f'  - Segmentation (w={window}, s={stride})')
     logger.info(f'  - Subsets {list(map(lambda o: o.name, opts))}')
-    logger.info(f'  - Transform {str(transform)}')
+    logger.info(f'  - Static Transform {str(static_transform)}')
+    logger.info(f'  - Dynamic Transform {str(dynamic_transform)}')
     logger.info(f'  - View {str(view)}')
 
     subjects = []
@@ -403,9 +441,11 @@ class Pamap2(Dataset):
       raw = load_cached_dat(root=self.root, name=name, logger=logger)
       memory += getsizeof(raw.storage())
       _, labels, tensor = split_data_record(raw)
-      if not transform is None:
-        tensor, labels = transform(tensor, labels)
-      data.append(SegmentedDataset(tensor=tensor, labels=labels, window=window, stride=stride))
+      if not static_transform is None:
+        tensor, labels = static_transform(tensor, labels)
+
+      if len(tensor) != 0:
+        data.append(SegmentedDataset(tensor=tensor, labels=labels, window=window, stride=stride))
 
     self.data = ConcatDataset(data)
 
@@ -414,10 +454,12 @@ class Pamap2(Dataset):
     )
 
   def __getitem__(self, index):
-    if self.view is None:
-      return self.data[index]
-    else:
-      return self.view(*self.data[index])
+    item = self.data[index]
+    if self.dynamic_transform is not None:
+      item = self.dynamic_transform(*item)
+    if self.view is not None:
+      item = self.view(*item)
+    return item
 
   def __len__(self) -> int:
     return len(self.data)
