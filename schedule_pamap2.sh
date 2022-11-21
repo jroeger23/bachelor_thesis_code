@@ -15,5 +15,6 @@ generate_options() {
 
 IFS=','
 for opt in $(generate_options); do 
+  IFS=' '
   python $experiment $opt
 done
