@@ -317,10 +317,24 @@ class Pamap2FilterRowsByLabel(Transform):
 class Pamap2InterpolateHeartrate(Transform):
 
   def __init__(self, mode: str = 'linear') -> None:
+    """Interpolate the hart rate nan values
+
+    Args:
+        mode (str, optional): the mode tu use by torch.nn.functional.interpolate. Defaults to 'linear'.
+    """
     self.mode = mode
 
   def __call__(self, sample: torch.Tensor,
                label: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    """Apply the heart_rate interpolation
+
+    Args:
+        sample (torch.Tensor): the sample (column 0 is the heart rate)
+        label (torch.Tensor): the label
+
+    Returns:
+        t.Tuple[torch.Tensor, torch.Tensor]: _description_
+    """
     heart_rate_view = sample[:, 0]
     heart_rates = heart_rate_view[heart_rate_view.isnan().logical_not()]
     heart_rates = torch.nn.functional.interpolate(input=heart_rates[None, None, :],
