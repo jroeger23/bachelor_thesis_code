@@ -1,6 +1,6 @@
 from .common import (CombineViews, ComposeTransforms, LabelDtypeTransform, NaNToConstTransform,
                      ResampleTransform, BatchAdditiveGaussianNoise, RangeNormalize,
-                     MeanVarianceNormalize, ClipSampleRange, RemoveSampleNanRows)
+                     MeanVarianceNormalize, ClipSampleRange, RemoveNanRows)
 from .lara import (LARa, LARaClassLabelView, LARaDataView, LARaIMUView, LARaLabelsView, LARaOptions,
                    LARaSplitIMUView, describeLARaLabels)
 from .mnist import *
@@ -9,4 +9,4 @@ from .opportunity import (Opportunity, OpportunityHumanSensorUnitsView, Opportun
                           OpportunityOptions, OpportunitySensorUnitView, OpportunitySplitLabelView,
                           OpportunitySplitSensorUnitsView, allOpportunityLabels, describeLabels)
 from .pamap2 import (Pamap2, Pamap2IMUView, Pamap2Options, Pamap2SplitIMUView, Pamap2View,
-                     describePamap2Labels, Pamap2FilterRowsByLabel)
+                     describePamap2Labels, Pamap2FilterRowsByLabel, Pamap2InterpolateHeartrate)

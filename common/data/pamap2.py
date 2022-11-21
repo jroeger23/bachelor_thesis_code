@@ -296,6 +296,23 @@ class Pamap2FilterRowsByLabel(Transform):
   def __str__(self) -> str:
     return f'Pamap2FilterRowsByLabel(keep_labels={self.keep_labels})'
 
+
+class Pamap2InterpolateHeartrate(Transform):
+
+  def __init__(self, mode: str = 'linear') -> None:
+    self.mode = mode
+
+  def __call__(self, sample: torch.Tensor,
+               label: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    heart_rate_view = sample[:, 0]
+    heart_rates = heart_rate_view[heart_rate_view.isnan().logical_not()]
+    heart_rates = torch.nn.functional.interpolate(input=heart_rates[None, None, :],
+                                                  size=(len(sample)),
+                                                  mode=self.mode).squeeze()
+    sample[:, 0] = heart_rates
+    return sample, label
+
+  def __str__(self) -> str:
 class Pamap2Options(Enum):
   SUBJECT1 = 1
   SUBJECT2 = 2

@@ -401,7 +401,9 @@ class ComposeTransforms(Transform):
         t.Tuple[torch.Tensor, torch.Tensor]: (transformed batch, transformed labels)
     """
     for t in self.transforms:
-      sample, label = t(sample, label)
+      # only apply transformations, as long as there is still data
+      if len(sample) != 0:
+        sample, label = t(sample, label)
 
     return sample, label
 
@@ -481,7 +483,7 @@ class NaNToConstTransform(Transform):
     return f'NaNToConst (sample_nan={self.sample_constant}, label_nan={self.label_constant})'
 
 
-class RemoveSampleNanRows(Transform):
+class RemoveNanRows(Transform):
 
   def __init__(self) -> None:
     """Remove all nan rows from a sample/label pair
@@ -497,13 +499,21 @@ class RemoveSampleNanRows(Transform):
         label (torch.Tensor): the labels to filter
 
     Returns:
-        t.Tuple[torch.Tensor, torch.Tensor]: sample (no nan values), label (for all kept sample rows)
+        t.Tuple[torch.Tensor, torch.Tensor]: sample (no nan values), label (no nan values)
     """
-    keep_cond = torch.any(sample.isnan(), dim=1, keepdim=False).logical_not()
-    return sample[keep_cond, :], label[keep_cond, :]
+    keep_cond_sample = torch.any(sample.isnan(), dim=1, keepdim=False).logical_not()
+
+    if label.ndim == 1:
+      keep_cond_label = label.isnan().logical_not()
+    else:
+      keep_cond_label = torch.any(label.isnan(), dim=1, keepdim=False).logical_not()
+
+    keep_cond = torch.logical_and(keep_cond_sample, keep_cond_label)
+
+    return sample[keep_cond], label[keep_cond]
 
   def __str__(self) -> str:
-    return 'RemoveSampleNanRows()'
+    return 'RemoveNanRows()'
 
 
 class LabelDtypeTransform(Transform):

@@ -7,7 +7,7 @@ from pytorch_lightning import callbacks as pl_cb
 from torch.utils.data import DataLoader
 
 from common.data import (CombineViews, ComposeTransforms, LabelDtypeTransform, LARa,
-                         LARaClassLabelView, LARaOptions, LARaSplitIMUView, RemoveSampleNanRows,
+                         LARaClassLabelView, LARaOptions, LARaSplitIMUView, RemoveNanRows,
                          ResampleTransform, BatchAdditiveGaussianNoise, MeanVarianceNormalize,
                          ClipSampleRange)
 from common.model import CNNIMU
@@ -52,7 +52,7 @@ def main(window: int, stride: int, sample_frequency: int, batch_size: int, cnn_i
   # Setup datasets #################################################################################
   dynamic_transform = ComposeTransforms([BatchAdditiveGaussianNoise(mu=0, sigma=0.01)])
   static_transform = ComposeTransforms([
-      RemoveSampleNanRows(),
+      RemoveNanRows(),
       ResampleTransform(freq_in=100, freq_out=sample_frequency),
       LabelDtypeTransform(dtype=torch.int64),
       MeanVarianceNormalize(mean=0.5, variance=1),
