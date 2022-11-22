@@ -1,2 +1,2 @@
-from .config import parseMongoObserverArgs
+from .config import parseMongoConfig
 from .run import getRunCheckpointDirectory

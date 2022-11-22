@@ -12,11 +12,11 @@ from common.data import (CombineViews, ComposeTransforms, LabelDtypeTransform, L
                          ClipSampleRange)
 from common.model import CNNIMU
 from common.pl_components import MonitorAcc, MonitorWF1, SacredLogger, MonitorBatchTime
-from common.helper import parseMongoObserverArgs, getRunCheckpointDirectory
+from common.helper import parseMongoConfig, getRunCheckpointDirectory
 
 ex = sacred.Experiment(name='CNN-IMU_LARa')
 
-ex.observers.append(MongoObserver.create(**parseMongoObserverArgs('./config.ini')))
+ex.observers.append(MongoObserver.create(**parseMongoConfig('./config.ini')))
 
 
 @ex.config

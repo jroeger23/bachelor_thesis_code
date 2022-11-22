@@ -10,13 +10,13 @@ from common.data import (BatchAdditiveGaussianNoise, ComposeTransforms, LabelDty
                          MeanVarianceNormalize, Pamap2, Pamap2FilterRowsByLabel,
                          Pamap2InterpolateHeartrate, Pamap2Options, Pamap2SplitIMUView,
                          RemoveNanRows, ResampleTransform)
-from common.helper import getRunCheckpointDirectory, parseMongoObserverArgs
+from common.helper import getRunCheckpointDirectory, parseMongoConfig
 from common.model import CNNIMU
 from common.pl_components import (MonitorAcc, MonitorBatchTime, MonitorWF1, SacredLogger)
 
 ex = sacred.Experiment(name='CNN-IMU_Pamap2(activity_labels)')
 
-ex.observers.append(MongoObserver.create(**parseMongoObserverArgs('./config.ini')))
+ex.observers.append(MongoObserver.create(**parseMongoConfig('./config.ini')))
 
 
 @ex.config

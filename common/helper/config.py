@@ -14,7 +14,7 @@ DEFAULT_MONGODB_CONFIG = {
 }
 
 
-def parseMongoObserverArgs(file: Union[Path, str]) -> Mapping[str, Any]:
+def parseMongoConfig(file: Union[Path, str], adapt: str = 'MongoObserver') -> Mapping[str, Any]:
   """Parse arguments for the MongoObserver
 
   INI keys
@@ -28,13 +28,14 @@ def parseMongoObserverArgs(file: Union[Path, str]) -> Mapping[str, Any]:
 
   Args:
       file (Union[Path, str]): the path or str pointing to the ini config
+      adapt (str): The output mode, either MongoObserver or IncenseExperimentLoader
 
   Raises:
       FileNotFoundError: When the path is invalid (also creates a dummy config)
       RuntimeError: If the config file misses some entries
 
   Returns:
-      Mapping[str, Any]: dict of MongoObserver arguments
+      Mapping[str, Any]: dict of desired arguments
   """
   path = Path(file) if isinstance(file, str) else file
 
@@ -48,12 +49,23 @@ def parseMongoObserverArgs(file: Union[Path, str]) -> Mapping[str, Any]:
       if not all([entry in config for entry in DEFAULT_MONGODB_CONFIG['sacred_db']]):
         raise RuntimeError(f'Incomplete config file {path}')
 
-      # adapt to MongoObserver args
-      return {
-          'url': config['host'],
-          'db_name': config['db_name'],
-          'username': config['user'],
-          'password': config['password'],
-          'authSource': config['auth_db'],
-          'authMechanism': config['auth_mechanism']
-      }
+      if adapt == 'MongoObserver':
+        # adapt to MongoObserver args
+        return {
+            'url': config['host'],
+            'db_name': config['db_name'],
+            'username': config['user'],
+            'password': config['password'],
+            'authSource': config['auth_db'],
+            'authMechanism': config['auth_mechanism']
+        }
+      elif adapt == 'IncenseExperimentLoader':
+        # adapt to IncenseExperimentLoader args
+        return {
+            'mongo_uri':
+                f'mongodb://{config["user"]}:{config["password"]}@{config["host"]}/{config["db_name"]}?authMechanism={config["auth_mechanism"]}&authSource={config["auth_db"]}',
+            'db_name':
+                config['db_name'],
+        }
+      else:
+        raise ValueError(f'Invalid mode "{adapt}"')
