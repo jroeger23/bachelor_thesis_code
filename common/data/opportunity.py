@@ -493,6 +493,9 @@ class OpportunityOptions(Enum):
   ADL5 = 10
   ALL_ADL = 11
   DRILL = 12
+  DEFAULT_TRAIN = 101
+  DEFAULT_VALIDATION = 102
+  DEFAULT_TEST = 103
 
 
 class Opportunity(Dataset):
@@ -501,7 +504,8 @@ class Opportunity(Dataset):
                root: str = './data',
                window: int = 24,
                stride: int = 12,
-               transform: t.Optional[Transform] = None,
+               static_transform: t.Optional[Transform] = None,
+               dynamic_transform: t.Optional[Transform] = None,
                view: t.Optional[View] = None,
                download: bool = True,
                opts: t.Iterable[OpportunityOptions] = []):
@@ -509,6 +513,7 @@ class Opportunity(Dataset):
     self.dataset_name = 'opportunity'
     self.zip_dir = 'OpportunityUCIDataset/dataset'
     self.root = os.path.join(root, self.dataset_name, self.zip_dir)
+    self.dynamic_transform = dynamic_transform
     self.view = view
 
     if download:
@@ -521,7 +526,8 @@ class Opportunity(Dataset):
     logger.info(f'Loading Opportunity Dataset...')
     logger.info(f'  - Segmentation (w={window}, s={stride})')
     logger.info(f'  - Subsets {list(map(lambda o: o.name, opts))}')
-    logger.info(f'  - Transform: {str(transform)}')
+    logger.info(f'  - Static Transform: {str(static_transform)}')
+    logger.info(f'  - Dynamic Transform: {str(dynamic_transform)}')
     logger.info(f'  - View: {str(view)}')
 
     self.columns = parse_columns_file(os.path.join(self.root, 'column_names.txt'))
@@ -550,14 +556,26 @@ class Opportunity(Dataset):
     if OpportunityOptions.ALL_SUBJECTS in opts or OpportunityOptions.SUBJECT4 in opts:
       prefixes.append('S4')
 
+    if OpportunityOptions.DEFAULT_TRAIN in opts:
+      runs = [
+          'S1-ADL1', 'S1-ADL2', 'S1-ADL3', 'S1-ADL4', 'S1-ADL5', 'S2-ADL1', 'S2-ADL2', 'S3-ADL1',
+          'S3-ADL2', 'S4-ADL1', 'S4-ADL2', 'S4-ADL3', 'S4-ADL4', 'S4-ADL5'
+      ]
+    elif OpportunityOptions.DEFAULT_VALIDATION in opts:
+      runs = ['S2-ADL3', 'S3-ADL3']
+    elif OpportunityOptions.DEFAULT_TEST in opts:
+      runs = ['S2-ADL4', 'S2-ADL5', 'S3-ADL4', 'S3-ADL5']
+    else:
+      runs = [prefix + suffix for prefix, suffix in product(prefixes, suffixes)]
+
     data = []
     memory = 0
-    for prefix, suffix in product(prefixes, suffixes):
-      raw = load_cached_dat(root=self.root, name=prefix + suffix, logger=logger)
+    for run in runs:
+      raw = load_cached_dat(root=self.root, name=run, logger=logger)
       memory += getsizeof(raw.storage())
       _, tensor, labels = split_data_record(raw)
-      if transform is not None:
-        tensor, labels = transform(tensor, labels)
+      if static_transform is not None:
+        tensor, labels = static_transform(tensor, labels)
       data.append(SegmentedDataset(tensor=tensor, labels=labels, window=window, stride=stride))
 
     self.data = ConcatDataset(data)
@@ -567,10 +585,12 @@ class Opportunity(Dataset):
     )
 
   def __getitem__(self, index):
-    if self.view is None:
-      return self.data[index]
-    else:
-      return self.view(*self.data[index])
+    item = self.data[index]
+    if self.dynamic_transform is not None:
+      item = self.dynamic_transform(*item)
+    if self.view is not None:
+      item = self.view(*item)
+    return item
 
   def __len__(self) -> int:
     return len(self.data)
