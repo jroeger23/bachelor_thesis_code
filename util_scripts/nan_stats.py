@@ -23,12 +23,12 @@ def print_file_nan_stats(path: Path) -> None:
   stat /= len(nan_loc)
   stat *= 100
 
-  print(stat.shape)
+  top = np.argsort(a=stat)[-7:]
 
-  print(f'{path}:', end='')
-  for pct in stat:
-    print(f' {float(pct):02.01f}%', end='')
-  print()
+  print(f'{path}:\t', end='')
+  for ix in top:
+    print(f' C{ix:03d}={float(stat[ix]):03.01f}%', end='')
+  print('', flush=True)
 
 
 def main():
