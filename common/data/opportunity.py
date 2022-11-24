@@ -588,8 +588,9 @@ class Opportunity(Dataset):
 
     if OpportunityOptions.DEFAULT_TRAIN in opts:
       runs = [
-          'S1-ADL1', 'S1-ADL2', 'S1-ADL3', 'S1-ADL4', 'S1-ADL5', 'S2-ADL1', 'S2-ADL2', 'S3-ADL1',
-          'S3-ADL2', 'S4-ADL1', 'S4-ADL2', 'S4-ADL3', 'S4-ADL4', 'S4-ADL5'
+          'S1-ADL1', 'S1-ADL2', 'S1-ADL3', 'S1-ADL4', 'S1-ADL5', 'S1-Drill', 'S2-ADL1', 'S2-ADL2',
+          'S2-Drill', 'S3-ADL1', 'S3-ADL2', 'S3-Drill', 'S4-ADL1', 'S4-ADL2', 'S4-ADL3', 'S4-ADL4',
+          'S4-ADL5', 'S4-Drill'
       ]
     elif OpportunityOptions.DEFAULT_VALIDATION in opts:
       runs = ['S2-ADL3', 'S3-ADL3']

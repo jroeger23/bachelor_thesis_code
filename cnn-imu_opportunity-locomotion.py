@@ -9,7 +9,8 @@ from torch.utils.data import DataLoader
 from common.data import (BatchAdditiveGaussianNoise, CombineViews, ComposeTransforms,
                          LabelDtypeTransform, MeanVarianceNormalize, Opportunity,
                          OpportunityHumanSensorUnitsView, OpportunityLocomotionLabelAdjustMissing3,
-                         OpportunityLocomotionLabelView, OpportunityOptions, RemoveNanRows)
+                         OpportunityLocomotionLabelView, OpportunityOptions,
+                         OpportunityRemoveHumanSensorUnitNaNRows)
 from common.helper import getRunCheckpointDirectory, parseMongoConfig
 from common.model import CNNIMU
 from common.pl_components import (MonitorAcc, MonitorBatchTime, MonitorWF1, SacredLogger)
@@ -50,7 +51,7 @@ def main(window: int, stride: int, batch_size: int, cnn_imu_blocks: int, cnn_imu
          cnn_imu_weight_initialization: str, _run: Run, _config):
   # Setup datasets #################################################################################
   static_transform = ComposeTransforms([
-      RemoveNanRows(),
+      OpportunityRemoveHumanSensorUnitNaNRows(),
       LabelDtypeTransform(dtype=torch.int64),
       OpportunityLocomotionLabelAdjustMissing3(),
       MeanVarianceNormalize(mean=0.5, variance=1)
