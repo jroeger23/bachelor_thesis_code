@@ -7,6 +7,7 @@ from .mnist import *
 from .opportunity import (Opportunity, OpportunityHumanSensorUnitsView, OpportunityLabelView,
                           OpportunityLocomotionLabelAdjustMissing3, OpportunityLocomotionLabelView,
                           OpportunityOptions, OpportunitySensorUnitView, OpportunitySplitLabelView,
-                          OpportunitySplitSensorUnitsView, allOpportunityLabels, describeLabels)
+                          OpportunityRemoveHumanSensorUnitNaNRows, OpportunitySplitSensorUnitsView,
+                          allOpportunityLabels, describeLabels)
 from .pamap2 import (Pamap2, Pamap2IMUView, Pamap2Options, Pamap2SplitIMUView, Pamap2View,
                      describePamap2Labels, Pamap2FilterRowsByLabel, Pamap2InterpolateHeartrate)
