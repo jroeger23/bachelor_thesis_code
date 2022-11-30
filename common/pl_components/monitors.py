@@ -70,9 +70,6 @@ class MonitorBatchTime(pl.Callback):
   """
 
   def __init__(self):
-    self.train_batch_times = []
-    self.validation_batch_times = []
-    self.test_batch_times = []
     self.train_timer = Timer()
     self.validation_timer = Timer()
     self.test_timer = Timer()
@@ -84,8 +81,7 @@ class MonitorBatchTime(pl.Callback):
   def on_train_batch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule, outputs, batch,
                          batch_idx) -> None:
     time = self.train_timer.stop()
-    pl_module.log(name='train/batch_time', value=time)
-    self.train_batch_times.append(time)
+    pl_module.log(name='train/batch_time', value=time, on_step=True, on_epoch=False)
 
   def on_validation_batch_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule, batch,
                                 batch_idx, dataloader_idx) -> None:
@@ -94,8 +90,7 @@ class MonitorBatchTime(pl.Callback):
   def on_validation_batch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule, outputs,
                               batch, batch_idx, dataloader_idx) -> None:
     time = self.validation_timer.stop()
-    pl_module.log(name='validation/batch_time', value=time)
-    self.validation_batch_times.append(time)
+    pl_module.log(name='validation/batch_time', value=time, on_step=False, on_epoch=True)
 
   def on_test_batch_start(self, trainer: pl.Trainer, pl_module: pl.LightningModule, batch,
                           batch_idx, dataloader_idx) -> None:
@@ -104,5 +99,4 @@ class MonitorBatchTime(pl.Callback):
   def on_test_batch_end(self, trainer: pl.Trainer, pl_module: pl.LightningModule, outputs, batch,
                         batch_idx, dataloader_idx) -> None:
     time = self.test_timer.stop()
-    pl_module.log(name='test/batch_time', value=time)
-    self.test_batch_times.append(time)
+    pl_module.log(name='test/batch_time', value=time, on_epoch=True)
