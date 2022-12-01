@@ -2,6 +2,8 @@ import pytorch_lightning as pl
 import torch
 import typing as t
 import logging
+from pypapi import papi_high
+from pypapi import events as papi_evt
 
 logger = logging.getLogger(__name__)
 
@@ -183,6 +185,7 @@ class CNNIMU(pl.LightningModule):
         weight_initialization (str, optional): parameter initialization method. Defaults to 'orthogonal'.
     """
     super().__init__()
+    self.save_hyperparameters()
     self.extra_hyper_params = extra_hyper_params
 
     # All IMU conv pipelines
@@ -292,6 +295,17 @@ class CNNIMU(pl.LightningModule):
                    batch_ix) -> torch.Tensor:
     imu_x, _ = batch
     return self(imu_x)
+
+  def performanceStatistics(self, batch: t.List[torch.Tensor]) -> t.Mapping[str, int]:
+    if self.device.type != 'cpu':
+      raise ValueError(f'Performance statistics must be run on the CPU (not {self.device})')
+
+    # Measure FLOPS, IOPS and Cycles with PAPI
+    papi_high.start_counters([papi_evt.PAPI_FP_OPS, papi_evt.PAPI_INT_INS, papi_evt.PAPI_TOT_CYC])
+    _ = self(batch)
+    perf_stats = papi_high.stop_counters()
+
+    return {'FLOPS': perf_stats[0], 'IOPS': perf_stats[1], 'CYCLES': perf_stats[2]}
 
   def configure_optimizers(self):
     if 'optimizer' not in self.extra_hyper_params:
