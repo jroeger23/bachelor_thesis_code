@@ -6,7 +6,7 @@ cnn_imu_blocks="2,3"
 cnn_imu_fc_features="256,512"
 use_transient_class="True,False"
 
-experiment='cnn-imu_pamap2.py'
+experiment='train_scripts/cnn-imu_pamap2.py'
 
 generate_options() {
   local IFS=' '

@@ -11,4 +11,5 @@ fi
 
 source "$activate_script"
 
+pip install -e .
 pip install -r requirements.txt

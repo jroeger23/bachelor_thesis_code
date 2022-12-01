@@ -4,6 +4,7 @@ if not exist .\venv\Scripts\activate.bat (
 
 call .\venv\Scripts\activate.bat
 
+pip.exe install -e .
 pip.exe install -r requirements.txt
 
 pause

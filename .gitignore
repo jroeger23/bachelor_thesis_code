@@ -8,3 +8,4 @@
 *perf_logs*
 credentials.txt
 config.ini
+/common.egg-info

@@ -5,7 +5,7 @@ cnn_imu_blocks="2,3"
 cnn_imu_fc_features="256,512"
 optimizer="RMSProp,Adam"
 
-experiment='cnn-imu_opportunity-locomotion.py'
+experiment='train_scripts/cnn-imu_opportunity-locomotion.py'
 
 generate_options() {
   local IFS=' '
