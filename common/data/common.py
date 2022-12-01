@@ -679,7 +679,9 @@ class MeanVarianceNormalize(Transform):
     """
 
     sample -= sample.mean(dim=self.dim, keepdim=True)  # Zero mean
-    sample /= sample.std(dim=self.dim, keepdim=True)  # Unit variance
+    std_dev = sample.std(dim=self.dim, keepdim=True)
+    std_dev[std_dev == 0.0] = 1.0  # Ensure numerical stability
+    sample /= std_dev  # Unit variance
     sample *= self.variance**0.5  # Scale to new variance
     sample += self.mean  # Shift to new mean
 
@@ -704,6 +706,52 @@ class ClipSampleRange(Transform):
 
   def __str__(self) -> str:
     return f'ClipSampleRange(range_min={self.range_min}, range_max={self.range_max}'
+
+
+class BlankInvalidColumns(Transform):
+
+  def __init__(self,
+               sample_thresh: t.Optional[float],
+               label_thresh: t.Optional[float],
+               sample_const: float = 0,
+               label_const: float = 0) -> None:
+    """Blank entire columns, with a certain theshold of NaN values
+
+    Args:
+        sample_thresh (t.Optional[float]): sample thresh [0..1] if None, dont blank
+        label_thresh (t.Optional[float]): label thresh [0..1] if None, dont blank
+        sample_const (float, optional): the sample constant to use for blanking. Defaults to 0.
+        label_const (float, optional): the label constant to use for blanking. Defaults to 0.
+    """
+    self.sample_thresh = sample_thresh
+    self.label_thresh = label_thresh
+    self.sample_const = sample_const
+    self.label_const = label_const
+
+  def __call__(self, sample: torch.Tensor,
+               label: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
+    """Apply the transformation
+
+    Args:
+        sample (torch.Tensor): the sample to transform
+        label (torch.Tensor): the label to transform
+
+    Returns:
+        t.Tuple[torch.Tensor, torch.Tensor]: (blanked sample, blanked label)
+    """
+    if self.sample_thresh is not None:
+      sample_rel_nan = sample.isnan().type(torch.float).sum(dim=0, keepdim=False) / sample.size()[0]
+      sample_blank_cond = sample_rel_nan >= self.sample_thresh
+      sample[:, sample_blank_cond] = self.sample_const
+    if self.label_thresh is not None:
+      label_rel_nan = label.isnan().type(torch.float).sum(dim=0, keepdim=False) / label.size()[0]
+      label_blank_cond = label_rel_nan >= self.label_thresh
+      label[:, label_blank_cond] = self.label_const
+
+    return sample, label
+
+  def __str__(self) -> str:
+    return f'BlankInvalidColumns(sample_thresh={self.sample_thresh}, label_thresh={self.label_thresh}, sample_const={self.label_const}, label_const={self.label_const})'
 
 
 class SegmentedDataset(Dataset):

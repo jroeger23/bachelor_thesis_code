@@ -10,7 +10,7 @@ from common.data import (BatchAdditiveGaussianNoise, CombineViews, ComposeTransf
                          LabelDtypeTransform, MeanVarianceNormalize, Opportunity,
                          OpportunityHumanSensorUnitsView, OpportunityLocomotionLabelAdjustMissing3,
                          OpportunityLocomotionLabelView, OpportunityOptions,
-                         OpportunityRemoveHumanSensorUnitNaNRows)
+                         OpportunityRemoveHumanSensorUnitNaNRows, BlankInvalidColumns)
 from common.helper import getRunCheckpointDirectory, parseMongoConfig
 from common.model import CNNIMU
 from common.pl_components import (MonitorAcc, MonitorBatchTime, MonitorWF1, SacredLogger)
@@ -33,6 +33,7 @@ def default_config():
   validation_interval = 1 / 5
   optimizer = 'Adam'
   cnn_imu_weight_initialization = 'orthogonal'
+  blank_invalid_columns = True
 
   if optimizer == 'Adam':
     lr = 1e-3
@@ -48,13 +49,14 @@ def default_config():
 @ex.automain
 def main(window: int, stride: int, batch_size: int, cnn_imu_blocks: int, cnn_imu_channels: int,
          cnn_imu_fc_features: int, max_epochs: int, loss_patience: int, validation_interval: float,
-         cnn_imu_weight_initialization: str, _run: Run, _config):
+         cnn_imu_weight_initialization: str, blank_invalid_columns: bool, _run: Run, _config):
   # Setup datasets #################################################################################
   static_transform = ComposeTransforms([
+      BlankInvalidColumns(sample_thresh=0.5 if blank_invalid_columns else None, label_thresh=None),
       OpportunityRemoveHumanSensorUnitNaNRows(),
       LabelDtypeTransform(dtype=torch.int64),
       OpportunityLocomotionLabelAdjustMissing3(),
-      MeanVarianceNormalize(mean=0.5, variance=1)
+      MeanVarianceNormalize(mean=0.5, variance=1),
   ])
   dynamic_transform = ComposeTransforms([BatchAdditiveGaussianNoise(mu=0, sigma=0.01)])
   view = CombineViews(sample_view=OpportunityHumanSensorUnitsView(),

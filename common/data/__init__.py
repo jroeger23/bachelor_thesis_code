@@ -1,6 +1,6 @@
 from .common import (CombineViews, ComposeTransforms, LabelDtypeTransform, NaNToConstTransform,
                      ResampleTransform, BatchAdditiveGaussianNoise, RangeNormalize,
-                     MeanVarianceNormalize, ClipSampleRange, RemoveNanRows)
+                     MeanVarianceNormalize, ClipSampleRange, RemoveNanRows, BlankInvalidColumns)
 from .lara import (LARa, LARaClassLabelView, LARaDataView, LARaIMUView, LARaLabelsView, LARaOptions,
                    LARaSplitIMUView, describeLARaLabels)
 from .mnist import *
