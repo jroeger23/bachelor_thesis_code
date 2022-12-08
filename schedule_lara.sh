@@ -1,6 +1,5 @@
 #!/bin/bash
 
-stride="12,33,50"
 batch_size="64,256,512"
 cnn_imu_blocks="2,3"
 cnn_imu_fc_features="256,512"
@@ -10,7 +9,7 @@ experiment='train_scripts/cnn-imu_lara.py'
 
 generate_options() {
   local IFS=' '
-  eval printf 'with\ %s,' "cnn_imu_blocks={$cnn_imu_blocks}\ cnn_imu_fc_features={$cnn_imu_fc_features}\ batch_size={$batch_size}\ stride={$stride}\ lr={$lr}"
+  eval printf 'with\ %s,' "cnn_imu_blocks={$cnn_imu_blocks}\ cnn_imu_fc_features={$cnn_imu_fc_features}\ batch_size={$batch_size}\ lr={$lr}"
 }
 
 IFS=','
