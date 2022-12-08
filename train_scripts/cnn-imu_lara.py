@@ -35,7 +35,7 @@ def default_config():
   cnn_imu_weight_initialization = 'orthogonal'
 
   if optimizer == 'Adam':
-    lr = 1e-3
+    lr = 1e-4
     betas = (0.9, 0.999)
     weight_decay = 0
   elif optimizer == 'RMSProp':
