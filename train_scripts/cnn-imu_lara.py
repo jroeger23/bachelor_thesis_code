@@ -24,10 +24,10 @@ def default_config():
   window = 100
   stride = 12
   sample_frequency = 30
-  batch_size = 400
-  cnn_imu_blocks = 2
+  batch_size = 512
+  cnn_imu_blocks = 3
   cnn_imu_channels = 64
-  cnn_imu_fc_features = 256
+  cnn_imu_fc_features = 512
   max_epochs = 50
   loss_patience = 32
   validation_interval = 1 / 5
