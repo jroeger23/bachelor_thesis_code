@@ -1,6 +1,6 @@
 from sacred.run import Run
 from pathlib import Path
-from typing import Union, Mapping
+from typing import Union, Dict
 from os.path import basename
 
 
@@ -11,7 +11,7 @@ def getRunCheckpointDirectory(root: Union[str, Path], _run: Run) -> Path:
   return r_path.joinpath(run_dir)
 
 
-def checkpointsById(root: Union[str, Path], run_id: str) -> Mapping[str, Path]:
+def checkpointsById(root: Union[str, Path], run_id: int) -> Dict[str, Path]:
   """Find checpoints in a root directory by run id
   Layout
   root/
@@ -22,10 +22,10 @@ def checkpointsById(root: Union[str, Path], run_id: str) -> Mapping[str, Path]:
 
   Args:
       root (Union[str, Path]): the root dir to search in
-      run_id (str): the id of the run "root/*-{run_id}/*.ckpt"
+      run_id (int): the id of the run "root/*-{run_id}/*.ckpt"
 
   Returns:
-      Mapping[str, Path]: return dict with keys 'best_acc', 'best_loss', 'best_wf1'
+      Dict[str, Path]: return dict with keys 'best_acc', 'best_loss', 'best_wf1'
   """
   root_path = root if isinstance(root, Path) else Path(root)
 
