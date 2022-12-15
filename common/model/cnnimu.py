@@ -1,9 +1,11 @@
+import logging
+import typing as t
+
 import pytorch_lightning as pl
 import torch
-import typing as t
-import logging
-from pypapi import papi_high
+import torch.ao.quantization as tq
 from pypapi import events as papi_evt
+from pypapi import papi_high
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +58,13 @@ class CNNIMUBlock(pl.LightningModule):
     self.relu2 = torch.nn.ReLU()
     self.pool = torch.nn.MaxPool2d(kernel_size=(2, 1))
 
+  def fuse_modules(self) -> None:
+    """Fuse each Conv2d Relu pair together
+    """
+    tq.fuse_modules(model=self,
+                    modules_to_fuse=[['conv1', 'relu1'], ['conv2', 'relu2']],
+                    inplace=True)
+
   def forward(self, x: torch.Tensor) -> torch.Tensor:
     """ Forward pass an 2D column-wise (T x D x C) IMU feature matrix
 
@@ -97,11 +106,18 @@ class CNNIMUPipeline(pl.LightningModule):
         conv_channels (int): the number of inner channels
     """
     super().__init__()
-    self.blocks = [
+    blocks = [
         CNNIMUBlock(first_block=False, conv_channels=conv_channels) for _ in range(n_blocks - 1)
     ]
-    self.blocks.insert(0, CNNIMUBlock(first_block=True, conv_channels=conv_channels))
-    self.blocks = torch.nn.ModuleList(self.blocks)
+    blocks.insert(0, CNNIMUBlock(first_block=True, conv_channels=conv_channels))
+    self.blocks = torch.nn.ModuleList(blocks)
+
+  def fuse_modules(self) -> None:
+    """Fuse all Conv2d Relu pairs of each block together
+    """
+    for block in self.blocks:
+      assert isinstance(block, CNNIMUBlock)
+      block.fuse_modules()
 
   def forward(self, x: torch.Tensor) -> torch.Tensor:
     """Forward pass 2D column-wise (T x D) IMU data to extract features
@@ -188,6 +204,10 @@ class CNNIMU(pl.LightningModule):
     self.save_hyperparameters()
     self.extra_hyper_params = extra_hyper_params
 
+    # De-/Quantization stubs (input and output quantization)
+    self.imu_quantizer = torch.nn.ModuleList([torch.quantization.QuantStub() for _ in imu_sizes])
+    self.dequantizer = torch.quantization.DeQuantStub()
+
     # All IMU conv pipelines
     pipelines = [CNNIMUPipeline(n_blocks=n_blocks, conv_channels=conv_channels) for _ in imu_sizes]
 
@@ -230,6 +250,18 @@ class CNNIMU(pl.LightningModule):
     logger.info(f'And a fully-connected feature width of {fc_features}')
     logger.info(f'Weight Initialization Method: {weight_initialization}')
 
+  def fuse_modules(self) -> None:
+    """Fuse all Conv2d Relu and Linear Relu pairs together
+    """
+    for pipeline in self.pipelines:
+      assert isinstance(pipeline, CNNIMUPipeline)
+      pipeline.fuse_modules()
+
+    for pipe_fc in self.pipe_fc:
+      tq.fuse_modules(model=pipe_fc, modules_to_fuse=['1', '2'], inplace=True)
+
+    tq.fuse_modules(model=self.fc, modules_to_fuse=['1', '2'], inplace=True)
+
   def forward(self, imu_x: t.List[torch.Tensor]) -> torch.Tensor:
     """Forward pass a list of IMU data batches
 
@@ -239,11 +271,22 @@ class CNNIMU(pl.LightningModule):
     Returns:
         torch.Tensor: the prediction logits for each class
     """
-    pipe_outputs = [p(x[:, None, :, :]) for p, x in zip(self.pipelines, imu_x)]
+
+    def insert_channel(x: torch.Tensor) -> torch.Tensor:
+      if x.ndim == 2:  # not batched
+        return x[None, None, :, :]
+      elif x.ndim == 3:  # batched
+        return x[:, None, :, :]
+      else:
+        raise ValueError(f'Invalid Tensor dimension: {x.size()}')
+
+    pipe_outputs = [
+        p(q(insert_channel(x))) for p, q, x in zip(self.pipelines, self.imu_quantizer, imu_x)
+    ]
     pipe_fc_outputs = [p_fc(p_o) for p_fc, p_o in zip(self.pipe_fc, pipe_outputs)]
     combined = self.fuse(pipe_fc_outputs)
     y = self.fc(combined)
-    return y
+    return self.dequantizer(y)
 
   def training_step(self, batch: t.Tuple[t.List[torch.Tensor], torch.Tensor],
                     batch_ix) -> torch.Tensor:
