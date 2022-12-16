@@ -272,19 +272,12 @@ class CNNIMU(pl.LightningModule):
         torch.Tensor: the prediction logits for each class
     """
 
-    def insert_channel(x: torch.Tensor) -> torch.Tensor:
-      if x.ndim == 2:  # not batched
-        return x[None, None, :, :]
-      elif x.ndim == 3:  # batched
-        return x[:, None, :, :]
-      else:
-        raise ValueError(f'Invalid Tensor dimension: {x.size()}')
-
+    # Torchscript only allows zip of same container types, such that this enumerate hack is needed
     pipe_outputs = [
-        p(q(insert_channel(x))) for p, q, x in zip(self.pipelines, self.imu_quantizer, imu_x)
+        p_fc(p(q(imu_x[i][None, None, :, :] if imu_x[i].ndim == 2 else imu_x[i][:, None, :, :])))
+        for i, (p_fc, p, q) in enumerate(zip(self.pipe_fc, self.pipelines, self.imu_quantizer))
     ]
-    pipe_fc_outputs = [p_fc(p_o) for p_fc, p_o in zip(self.pipe_fc, pipe_outputs)]
-    combined = self.fuse(pipe_fc_outputs)
+    combined = self.fuse(pipe_outputs)
     y = self.fc(combined)
     return self.dequantizer(y)
 
