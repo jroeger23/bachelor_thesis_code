@@ -1,14 +1,17 @@
 import logging
+from typing import Any, Dict
 
 import incense
 import pytorch_lightning as pl
 import sacred
+import torch
 import torch.ao.quantization as tq
 from pytorch_model_summary import summary
 from sacred.observers import MongoObserver
 
 from common.data import LARaDataModule
-from common.helper import (checkpointsById, getRunCheckpointDirectory, parseMongoConfig)
+from common.helper import (ObserverPlaceholder, QConfigFactory, checkpointsById,
+                           getRunCheckpointDirectory, parseMongoConfig)
 from common.model import CNNIMU
 from common.pl_components import (MonitorAcc, MonitorBatchTime, MonitorWF1, SacredLogger)
 
@@ -47,10 +50,28 @@ def defautltConfig():
   trained_model_run_id = bestRunId()
   backend = 'fbgemm'
   batch_size = 32
+  activation_observer = 'torch.ao.quantization.HistogramObserver'
+  activation_observer_args = {
+      'dtype': torch.quint8,
+      'quant_min': 0,
+      'quant_max': 2**7 - 1,
+      'qscheme': torch.per_tensor_affine
+  }
+  weight_observer = 'torch.ao.quantization.PerChannelMinMaxObserver'
+  weight_observer_args = {
+      'dtype': torch.qint8,
+      'quant_min': -2**6,
+      'quant_max': 2**6 - 1,
+      'qscheme': torch.per_channel_symmetric
+  }
 
 
 @ex.automain
-def main(trained_model_run_id: int, backend: str, batch_size: int, _run):
+def main(trained_model_run_id: int, backend: str, batch_size: int, activation_observer: str,
+         activation_observer_args: Dict[str, Any], weight_observer: str,
+         weight_observer_args: Dict[str, Any], _run):
+  torch.backends.quantized.engine = backend
+
   # Data module
   data_module = LARaDataModule(batch_size=batch_size, window=100, stride=12, sample_frequency=30)
   data_module.setup('fit')
@@ -63,7 +84,10 @@ def main(trained_model_run_id: int, backend: str, batch_size: int, _run):
   fp32_model.eval()
 
   # Prepare for quantization
-  setattr(fp32_model, 'qconfig', tq.get_default_qconfig(backend=backend))
+  fp32_model.qconfig_factory = QConfigFactory(
+      ObserverPlaceholder(activation_observer, **activation_observer_args),
+      ObserverPlaceholder(weight_observer, **weight_observer_args))
+  setattr(fp32_model, 'qconfig', fp32_model.qconfig_factory.getQConfig())
   logger.info(summary(fp32_model, data_module.test_set[0][0]))
   logger.info(f'QConfig: {fp32_model.qconfig}')
   fp32_model.fuse_modules()
@@ -88,9 +112,14 @@ def main(trained_model_run_id: int, backend: str, batch_size: int, _run):
                             accelerator='cpu',
                             callbacks=[MonitorAcc(), MonitorBatchTime(),
                                        MonitorWF1()])
-  logger.info('Testing int8 model')
+  logger.info('Testing quantized model')
   trainer_eval.test(model=q_model, dataloaders=data_module.test_dataloader())
 
   # Save quantized model
-  ckpt_dir = getRunCheckpointDirectory(root='./logs/checkpoints', _run=_run)
-  q_model.to_torchscript(file_path=ckpt_dir.joinpath('q_model.pt'))
+  ckpt_path = getRunCheckpointDirectory(root='./logs/checkpoints', _run=_run).joinpath('model.ckpt')
+  trainer_eval.save_checkpoint(filepath=ckpt_path)
+
+  # Try to load the model
+  logger.info('Testing loaded quantized model')
+  loaded_model = CNNIMU.load_from_checkpoint(ckpt_path)
+  trainer_eval.test(model=loaded_model, dataloaders=data_module.test_dataloader())
