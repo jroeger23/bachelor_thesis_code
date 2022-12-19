@@ -6,6 +6,7 @@ import torch
 import torch.ao.quantization as tq
 from pypapi import events as papi_evt
 from pypapi import papi_high
+from common.helper import QConfigFactory
 
 logger = logging.getLogger(__name__)
 
@@ -280,6 +281,26 @@ class CNNIMU(pl.LightningModule):
     combined = self.fuse(pipe_outputs)
     y = self.fc(combined)
     return self.dequantizer(y)
+
+  def on_load_checkpoint(self, checkpoint: t.Dict[str, t.Any]) -> None:
+    if 'qconfig_factory' not in checkpoint:
+      return
+
+    # Restore quantization configuration
+    self.eval()
+    self.fuse_modules()
+    self.qconfig_factory = checkpoint['qconfig_factory']
+    assert isinstance(self.qconfig_factory, QConfigFactory)
+    self.qconfig = self.qconfig_factory.getQConfig()
+    tq.prepare(model=self, inplace=True)
+    tq.convert(module=self, inplace=True, remove_qconfig=True)
+
+  def on_save_checkpoint(self, checkpoint: t.Dict[str, t.Any]) -> None:
+    if not hasattr(self, 'qconfig_factory'):
+      return
+
+    # save quantization factory (qconfig itself is not pickleable)
+    checkpoint['qconfig_factory'] = self.qconfig_factory
 
   def training_step(self, batch: t.Tuple[t.List[torch.Tensor], torch.Tensor],
                     batch_ix) -> torch.Tensor:
