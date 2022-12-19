@@ -5,12 +5,13 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python: Debug Sacred File",
+      "name": "Python: Current Sacred Experiment File",
       "type": "python",
       "request": "launch",
       "program": "${file}",
       "args": [
-        "-u"
+        "--unobserved",
+        "--debug"
       ],
       "console": "integratedTerminal",
       "justMyCode": false
