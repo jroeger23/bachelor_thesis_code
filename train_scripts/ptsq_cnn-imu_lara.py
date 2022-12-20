@@ -10,7 +10,7 @@ from pytorch_model_summary import summary
 from sacred.observers import MongoObserver
 
 from common.data import LARaDataModule
-from common.helper import (ObserverPlaceholder, QConfigFactory, checkpointsById,
+from common.helper import (GlobalPlaceholder, QConfigFactory, checkpointsById,
                            getRunCheckpointDirectory, parseMongoConfig)
 from common.model import CNNIMU
 from common.pl_components import (MonitorAcc, MonitorBatchTime, MonitorWF1, SacredLogger)
@@ -50,19 +50,21 @@ def defautltConfig():
   trained_model_run_id = bestRunId()
   backend = 'fbgemm'
   batch_size = 32
-  activation_observer = 'torch.ao.quantization.HistogramObserver'
+  activation_observer = 'torch.ao.quantization.PlaceholderObserver'
+  activation_qscheme = 'torch.per_tensor_affine'
   activation_observer_args = {
-      'dtype': torch.quint8,
+      'dtype': GlobalPlaceholder('torch.quint8'),
       'quant_min': 0,
       'quant_max': 2**7 - 1,
-      'qscheme': torch.per_tensor_affine
+      'qscheme': GlobalPlaceholder(activation_qscheme)
   }
   weight_observer = 'torch.ao.quantization.PerChannelMinMaxObserver'
+  weight_qscheme = 'torch.per_tensor_symmetric'
   weight_observer_args = {
-      'dtype': torch.qint8,
+      'dtype': GlobalPlaceholder('torch.qint8'),
       'quant_min': -2**6,
       'quant_max': 2**6 - 1,
-      'qscheme': torch.per_channel_symmetric
+      'qscheme': GlobalPlaceholder(weight_qscheme)
   }
 
 
@@ -85,8 +87,8 @@ def main(trained_model_run_id: int, backend: str, batch_size: int, activation_ob
 
   # Prepare for quantization
   fp32_model.qconfig_factory = QConfigFactory(
-      ObserverPlaceholder(activation_observer, **activation_observer_args),
-      ObserverPlaceholder(weight_observer, **weight_observer_args))
+      GlobalPlaceholder(activation_observer, **activation_observer_args),
+      GlobalPlaceholder(weight_observer, **weight_observer_args))
   setattr(fp32_model, 'qconfig', fp32_model.qconfig_factory.getQConfig())
   logger.info(summary(fp32_model, data_module.test_set[0][0]))
   logger.info(f'QConfig: {fp32_model.qconfig}')

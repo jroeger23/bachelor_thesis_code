@@ -3,72 +3,76 @@ from typing import Any, Dict
 import torch.ao.quantization as tq
 
 
-class ObserverPlaceholder():
-  """Pickleable Observer factory
+class GlobalPlaceholder():
+  """Pickleable global variable/class factory
   """
 
-  def __init__(self, klass, **kwargs) -> None:
-    """Create a new ObserverPlaceholder with a class definition and kwargs.
+  def __init__(self, global_name, **kwargs) -> None:
+    """Create a new GlobalPlaceholder with a class definition and kwargs.
     The class is stored as a fully quallified string, which will be imported
     when the class is requested.
 
     Args:
-        klass (_type_): the observer class (either fully qualified string or class variable)
-                        needs to implement with_args, if kwargs are given
+        global_name (_type_): the class or global name (either fully qualified string or class variable)
+                              needs to implement with_args, if kwargs are given
     """
-    self._class_name = klass if isinstance(klass,
-                                           str) else f'{klass.__module__}.{klass.__qualname__}'
+    self._global_name = global_name if isinstance(
+        global_name, str) else f'{global_name.__module__}.{global_name.__qualname__}'
     self._kwargs = kwargs
+
+  @property
+  def global_name(self):
+    return self._global_name
 
   @staticmethod
   def _reconstructKwargs(argument_dict: Dict[str, Any]) -> Dict[str, Any]:
     return {
-        k: v.getClassWithArgs() if isinstance(v, ObserverPlaceholder) else v
+        k: v.getItemWithArgs() if isinstance(v, GlobalPlaceholder) else v
         for k, v in argument_dict.items()
     }
 
-  def getClass(self) -> Any:
-    """Get the class of the Observer
+  def getItem(self) -> Any:
+    """Get the stored global item
 
     Returns:
-        Any: class variable
+        Any: item or class factory
     """
-    components = self._class_name.split('.')
+    components = self._global_name.split('.')
     mod = __import__(components[0])
     for comp in components[1:]:
       mod = getattr(mod, comp)
     return mod
 
   def getKwargs(self) -> Dict[str, Any]:
-    """Get the kwargs dict of for the observer
+    """Get the kwargs dict of for the item
 
     Returns:
         Dict[str, Any]: kwargs
     """
-    return ObserverPlaceholder._reconstructKwargs(self._kwargs)
+    return GlobalPlaceholder._reconstructKwargs(self._kwargs)
 
-  def getClassWithArgs(self) -> Any:
+  def getItemWithArgs(self) -> Any:
     """Bind the kwargs to the observer and return the factory
 
     Returns:
-        Any: observer factory
+        Any: item or class factory
     """
-    klass = self.getClass()
+    item = self.getItem()
     kwargs = self.getKwargs()
 
     # Restore arguments with _PartialWrapper of torch.ao.quantization.observer
     if kwargs:
-      klass = klass.with_args(**kwargs)
+      item = item.with_args(**kwargs)
 
-    return klass
+    return item
 
 
 class QConfigFactory():
   """A pickleable factory for qconfigs
   """
 
-  def __init__(self, activation_quantizer: ObserverPlaceholder,
-               weight_quantizer: ObserverPlaceholder) -> None:
+  def __init__(self, activation_quantizer: GlobalPlaceholder,
+               weight_quantizer: GlobalPlaceholder) -> None:
     """Create a new QConfigFactory
 
     Args:
@@ -84,7 +88,7 @@ class QConfigFactory():
     Returns:
         tq.QConfig: the new qconfig
     """
-    act_cls = self._activation_quantizer.getClassWithArgs()
-    wgt_cls = self._weight_quantizer.getClassWithArgs()
+    act_cls = self._activation_quantizer.getItemWithArgs()
+    wgt_cls = self._weight_quantizer.getItemWithArgs()
 
     return tq.QConfig(activation=act_cls, weight=wgt_cls)
