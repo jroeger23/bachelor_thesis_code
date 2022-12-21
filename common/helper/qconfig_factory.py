@@ -62,6 +62,8 @@ class GlobalPlaceholder():
 
     # Restore arguments with _PartialWrapper of torch.ao.quantization.observer
     if kwargs:
+      assert hasattr(item,
+                     'with_args'), f'bindning kwargs requires {item} to provide "with_args" method'
       item = item.with_args(**kwargs)
 
     return item
