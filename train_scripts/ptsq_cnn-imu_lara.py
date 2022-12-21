@@ -107,9 +107,10 @@ def main(trained_model_run_id: int, backend: str, batch_size: int,
 
   # Gather calibration data
   logger.info('Gathering activation statistics on train dataset')
-  trainer_statistics = pl.Trainer(logger=False,
+  trainer_statistics = pl.Trainer(logger=SacredLogger(_run),
                                   enable_checkpointing=False,
                                   limit_test_batches=limit_calibration_set,
+                                  callbacks=[MonitorBatchTime(on_test='calibration/batch_time')],
                                   accelerator='auto')
   trainer_statistics.test(model=fp32_model, dataloaders=data_module.train_dataloader())
 
