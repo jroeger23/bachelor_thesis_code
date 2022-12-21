@@ -117,6 +117,7 @@ def main(trained_model_run_id: int, backend: str, batch_size: int,
   # Convert to quantized
   logger.info('Converting to quantized model')
   fp32_model.to('cpu')
+  fp32_model.trainer = None
   q_model = tq.convert(module=fp32_model)
   logger.info(summary(q_model, data_module.test_set[0][0]))
 
