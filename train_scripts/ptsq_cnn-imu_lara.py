@@ -52,8 +52,8 @@ def defautltConfig():
   batch_size = 32
   limit_calibration_set = None
   n_bits = 7
-  activation_observer = 'torch.ao.quantization.HistogramObserver'
-  activation_qscheme = 'torch.per_channel_affine' if 'PerChannel' in activation_observer else 'torch.per_tensor_affine'
+  activation_observer = 'torch.ao.quantization.HistogramObserver' # Cannot be 'PerChannel'
+  activation_qscheme = 'torch.per_tensor_affine'
   activation_observer_args = {
       'dtype': GlobalPlaceholder('torch.quint8'),  # activation dtype must be quint8
       'quant_min': 0,

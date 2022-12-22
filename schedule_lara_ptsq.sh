@@ -1,7 +1,7 @@
 #!/bin/bash
 
 n_bits="7,6,5,4,3"
-activation_observer="torch.ao.quantization.HistogramObserver,torch.ao.quantization.MinMaxObserver,torch.ao.quantization.PerChannelMinMaxObserver,torch.ao.quantization.MovingAverageMinMaxObserver,torch.ao.quantization.MovingAveragePerChannelMinMaxObserver"
+activation_observer="torch.ao.quantization.HistogramObserver,torch.ao.quantization.MinMaxObserver,torch.ao.quantization.MovingAverageMinMaxObserver"
 weight_observer="torch.ao.quantization.MinMaxObserver,torch.ao.quantization.PerChannelMinMaxObserver"
 weight_range="full,symmetric,uint"
 limit_calibration_set="None,0.1,0.01"
