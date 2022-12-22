@@ -103,11 +103,14 @@ class LARaDataModule(pl.LightningDataModule):
                            dynamic_transform=self.dynamic_transform,
                            view=self.view)
 
-  def train_dataloader(self) -> DataLoader:
-    return DataLoader(dataset=self.train_set, batch_size=self.batch_size, shuffle=True)
+  def train_dataloader(self, **dataloader_kwargs) -> DataLoader:
+    kwargs = {'shuffle': True} | dataloader_kwargs
+    return DataLoader(dataset=self.train_set, batch_size=self.batch_size, **kwargs)
 
-  def val_dataloader(self) -> DataLoader:
-    return DataLoader(dataset=self.val_set, batch_size=self.batch_size, shuffle=False)
+  def val_dataloader(self, **dataloader_kwargs) -> DataLoader:
+    kwargs = {'shuffle': False} | dataloader_kwargs
+    return DataLoader(dataset=self.val_set, batch_size=self.batch_size, **kwargs)
 
-  def test_dataloader(self) -> DataLoader:
-    return DataLoader(dataset=self.test_set, batch_size=self.batch_size, shuffle=False)
+  def test_dataloader(self, **dataloader_kwargs) -> DataLoader:
+    kwargs = {'shuffle': False} | dataloader_kwargs
+    return DataLoader(dataset=self.test_set, batch_size=self.batch_size, **kwargs)
