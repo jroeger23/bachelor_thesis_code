@@ -287,9 +287,11 @@ class CNNIMU(pl.LightningModule):
       return
 
     # Restore quantization configuration
+    logger.info(f'Restoring Model Quantization')
     self.eval()
     self.fuse_modules()
     self.qconfig_factory = checkpoint['qconfig_factory']
+    logger.info(f'QConfigFactory: {self.qconfig_factory}')
     assert isinstance(self.qconfig_factory, QConfigFactory)
     self.qconfig = self.qconfig_factory.getQConfig()
     tq.prepare(model=self, inplace=True)

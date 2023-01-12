@@ -68,6 +68,9 @@ class GlobalPlaceholder():
 
     return item
 
+  def __str__(self) -> str:
+    return f'GlobalPlaceholder(global_name={self.global_name!s}, kwargs={self._kwargs!s})'
+
 
 class QConfigFactory():
   """A pickleable factory for qconfigs
@@ -94,3 +97,6 @@ class QConfigFactory():
     wgt_cls = self._weight_quantizer.getItemWithArgs()
 
     return tq.QConfig(activation=act_cls, weight=wgt_cls)
+
+  def __str__(self) -> str:
+    return f'QConfigFactory(activation_quantizer={self._activation_quantizer!s}, weight_quantizer={self._weight_quantizer!s})'
