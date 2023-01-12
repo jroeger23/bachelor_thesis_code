@@ -40,5 +40,7 @@ def checkpointsById(root: Union[str, Path], run_id: int) -> Dict[str, Path]:
       ret['best_loss'] = ckpt
     elif basename(ckpt).startswith('BEST_WF1'):
       ret['best_wf1'] = ckpt
+    elif basename(ckpt) == 'model.ckpt':
+      ret['model'] = ckpt
 
   return ret
