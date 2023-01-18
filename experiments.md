@@ -15,7 +15,8 @@
 
 
 # Quantization Customization
-- Weight Observers - up to 7 Bits
+- Weight Observers
+  - up to 7 Bits
   - Range:
     - full range [-64, 63]
     - symmetric range [-63, 63]
