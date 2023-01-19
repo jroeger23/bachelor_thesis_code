@@ -1,0 +1,15 @@
+python train_scripts/qat_cnn-imu.py with n_bits=7 activation_observer=torch.ao.quantization.HistogramObserver weight_observer=torch.ao.quantization.PerChannelMinMaxObserver weight_range=full use_dataset=pamap2
+python train_scripts/qat_cnn-imu.py with n_bits=7 activation_observer=torch.ao.quantization.HistogramObserver weight_observer=torch.ao.quantization.PerChannelMinMaxObserver weight_range=full use_dataset=lara
+python train_scripts/qat_cnn-imu.py with n_bits=7 activation_observer=torch.ao.quantization.HistogramObserver weight_observer=torch.ao.quantization.PerChannelMinMaxObserver weight_range=full use_dataset=opportunity
+python train_scripts/qat_cnn-imu.py with n_bits=7 activation_observer=torch.ao.quantization.MinMaxObserver weight_observer=torch.ao.quantization.MinMaxObserver weight_range=full use_dataset=pamap2
+python train_scripts/qat_cnn-imu.py with n_bits=7 activation_observer=torch.ao.quantization.MinMaxObserver weight_observer=torch.ao.quantization.MinMaxObserver weight_range=full use_dataset=lara
+python train_scripts/qat_cnn-imu.py with n_bits=7 activation_observer=torch.ao.quantization.MinMaxObserver weight_observer=torch.ao.quantization.MinMaxObserver weight_range=full use_dataset=opportunity
+python train_scripts/qat_cnn-imu.py with n_bits=7 activation_observer=torch.ao.quantization.MinMaxObserver weight_observer=torch.ao.quantization.PerChannelMinMaxObserver weight_range=full use_dataset=pamap2
+python train_scripts/qat_cnn-imu.py with n_bits=7 activation_observer=torch.ao.quantization.MinMaxObserver weight_observer=torch.ao.quantization.PerChannelMinMaxObserver weight_range=full use_dataset=lara
+python train_scripts/qat_cnn-imu.py with n_bits=7 activation_observer=torch.ao.quantization.MinMaxObserver weight_observer=torch.ao.quantization.PerChannelMinMaxObserver weight_range=full use_dataset=opportunity
+python train_scripts/qat_cnn-imu.py with n_bits=7 activation_observer=torch.ao.quantization.MovingAverageMinMaxObserver weight_observer=torch.ao.quantization.MinMaxObserver weight_range=full use_dataset=pamap2
+python train_scripts/qat_cnn-imu.py with n_bits=7 activation_observer=torch.ao.quantization.MovingAverageMinMaxObserver weight_observer=torch.ao.quantization.MinMaxObserver weight_range=full use_dataset=lara
+python train_scripts/qat_cnn-imu.py with n_bits=7 activation_observer=torch.ao.quantization.MovingAverageMinMaxObserver weight_observer=torch.ao.quantization.MinMaxObserver weight_range=full use_dataset=opportunity
+python train_scripts/qat_cnn-imu.py with n_bits=7 activation_observer=torch.ao.quantization.MovingAverageMinMaxObserver weight_observer=torch.ao.quantization.PerChannelMinMaxObserver weight_range=full use_dataset=pamap2
+python train_scripts/qat_cnn-imu.py with n_bits=7 activation_observer=torch.ao.quantization.MovingAverageMinMaxObserver weight_observer=torch.ao.quantization.PerChannelMinMaxObserver weight_range=full use_dataset=lara
+python train_scripts/qat_cnn-imu.py with n_bits=7 activation_observer=torch.ao.quantization.MovingAverageMinMaxObserver weight_observer=torch.ao.quantization.PerChannelMinMaxObserver weight_range=full use_dataset=opportunity
