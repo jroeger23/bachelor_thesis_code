@@ -5,12 +5,23 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python: Current Sacred Experiment File",
+      "name": "Python: Current Sacred Experiment File (unobserved)",
       "type": "python",
       "request": "launch",
       "program": "${file}",
       "args": [
         "--unobserved",
+        "--debug"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      "name": "Python: Current Sacred Experiment File (observerd)",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "args": [
         "--debug"
       ],
       "console": "integratedTerminal",
