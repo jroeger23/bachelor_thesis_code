@@ -1,9 +1,9 @@
 #!/bin/bash
 
-n_bits="7"
+n_bits="7,"
 activation_observer="torch.ao.quantization.HistogramObserver,torch.ao.quantization.MinMaxObserver,torch.ao.quantization.MovingAverageMinMaxObserver"
 weight_observer="torch.ao.quantization.MinMaxObserver,torch.ao.quantization.PerChannelMinMaxObserver"
-weight_range="full"
+weight_range="full,"
 dataset="pamap2,lara,opportunity"
 
 
