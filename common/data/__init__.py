@@ -12,4 +12,4 @@ from .opportunity import (Opportunity, OpportunityHumanSensorUnitsView, Opportun
 from .pamap2 import (Pamap2, Pamap2IMUView, Pamap2Options, Pamap2SplitIMUView, Pamap2View,
                      describePamap2Labels, Pamap2FilterRowsByLabel, Pamap2InterpolateHeartrate)
 
-from .data_modules import LARaDataModule
+from .data_modules import LARaDataModule, Pamap2DataModule
