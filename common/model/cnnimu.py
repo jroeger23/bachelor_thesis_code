@@ -288,14 +288,29 @@ class CNNIMU(pl.LightningModule):
 
     # Restore quantization configuration
     logger.info(f'Restoring Model Quantization')
-    self.eval()
     self.fuse_modules()
     self.qconfig_factory = checkpoint['qconfig_factory']
+    self.quantization_state = checkpoint[
+        'quantization_state'] if 'quantization_state' in checkpoint else 'PTQ'
+    logger.info(f'QuantizationState: {self.quantization_state}')
     logger.info(f'QConfigFactory: {self.qconfig_factory}')
     assert isinstance(self.qconfig_factory, QConfigFactory)
     self.qconfig = self.qconfig_factory.getQConfig()
-    tq.prepare(model=self, inplace=True)
-    tq.convert(module=self, inplace=True, remove_qconfig=True)
+
+    if self.quantization_state == 'PTQ':
+      self.eval()
+      tq.prepare(model=self, inplace=True)
+      tq.convert(module=self, inplace=True, remove_qconfig=True)
+    elif self.quantization_state == 'QAT_TRAIN':
+      tq.prepare_qat(model=self, inplace=True)
+      self.train()
+    elif self.quantization_state == 'QAT_DONE':
+      self.train()
+      tq.prepare_qat(model=self, inplace=True)
+      self.eval()
+      tq.convert(module=self, inplace=True, remove_qconfig=True)
+    else:
+      raise ValueError(f'Unknown quantization state {self.quantization_state}')
 
   def on_save_checkpoint(self, checkpoint: t.Dict[str, t.Any]) -> None:
     if not hasattr(self, 'qconfig_factory'):
@@ -303,6 +318,8 @@ class CNNIMU(pl.LightningModule):
 
     # save quantization factory (qconfig itself is not pickleable)
     checkpoint['qconfig_factory'] = self.qconfig_factory
+    checkpoint['quantization_state'] = self.quantization_state if hasattr(
+        self, 'quantization_state') else 'PTQ'
 
   def training_step(self, batch: t.Tuple[t.List[torch.Tensor], torch.Tensor],
                     batch_ix) -> torch.Tensor:
