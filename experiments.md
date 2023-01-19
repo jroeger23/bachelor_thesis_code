@@ -34,6 +34,8 @@
     - Min/Max
     - Min/Max (moving avg.)
     - Histogramm
+  - Granularity:
+    - Per Tensor
   - Dynamic (only for linear layers)
 - Mixed Quantization
   - Conv
