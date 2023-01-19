@@ -1,3 +1,19 @@
+# Backends (pytorch)
+
+- fbgemm
+  - on cpu
+  - up to 7 bits
+  - supports customization
+- tenrorrt
+  - early prototype
+  - only supports graph based approach
+  - only static quantization
+- qnnpack
+  - form arm processors
+- x86/native
+  - auto choose qnnpack or fbgemm
+
+
 # Quantization efficiency metrics
 
 - Inference Time
