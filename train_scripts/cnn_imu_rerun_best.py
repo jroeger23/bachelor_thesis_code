@@ -69,7 +69,9 @@ def bestExperimentByDataset(dataset: str):
   return ex
 
 
-lara_experiment.run(config_updates=bestExperimentByDataset('lara').to_dict()['config'])
+bs_128 = {'batch_size': 128}
+
+lara_experiment.run(config_updates=bestExperimentByDataset('lara').to_dict()['config'] | bs_128)
 opportunity_experiment.run(
-    config_updates=bestExperimentByDataset('opportunity').to_dict()['config'])
-pamap2_experiment.run(config_updates=bestExperimentByDataset('pamap2').to_dict()['config'])
+    config_updates=bestExperimentByDataset('opportunity').to_dict()['config'] | bs_128)
+pamap2_experiment.run(config_updates=bestExperimentByDataset('pamap2').to_dict()['config'] | bs_128)
