@@ -5,7 +5,7 @@ cnn_imu_blocks="2,3"
 cnn_imu_fc_features="256,512"
 lr="1e-3,1e-4"
 
-experiment='train_scripts/cnn-imu_lara.py'
+experiment='train_scripts/cnn_imu_lara.py'
 
 generate_options() {
   local IFS=' '
