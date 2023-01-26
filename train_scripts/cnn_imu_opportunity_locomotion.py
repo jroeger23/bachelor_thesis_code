@@ -137,6 +137,7 @@ def main(window: int, stride: int, batch_size: int, cnn_imu_blocks: int, cnn_imu
                            MonitorAcc(),
                            MonitorBatchTime(), best_acc_ckpt, best_wf1_ckpt, best_loss_ckpt
                        ],
+                       log_every_n_steps=1,
                        logger=SacredLogger(_run=_run),
                        val_check_interval=validation_interval)
   trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=validation_loader)
