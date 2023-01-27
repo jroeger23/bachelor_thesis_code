@@ -1,4 +1,5 @@
 import incense
+from pathlib import Path
 from cnn_imu_lara import ex as lara_experiment
 from cnn_imu_opportunity_locomotion import ex as opportunity_experiment
 from cnn_imu_pamap2 import ex as pamap2_experiment
@@ -70,8 +71,18 @@ def bestExperimentByDataset(dataset: str):
 
 
 bs_128 = {'batch_size': 128}
+meta = {
+    'my_meta': {
+        'runner': Path(__file__).name,
+        'flags': ['disabled_puppet'],
+        'fixed_batch_size': 128
+    }
+}
 
-lara_experiment.run(config_updates=bestExperimentByDataset('lara').to_dict()['config'] | bs_128)
+lara_experiment.run(config_updates=bestExperimentByDataset('lara').to_dict()['config'] | bs_128,
+                    meta_info=meta)
 opportunity_experiment.run(
-    config_updates=bestExperimentByDataset('opportunity').to_dict()['config'] | bs_128)
-pamap2_experiment.run(config_updates=bestExperimentByDataset('pamap2').to_dict()['config'] | bs_128)
+    config_updates=bestExperimentByDataset('opportunity').to_dict()['config'] | bs_128,
+    meta_info=meta)
+pamap2_experiment.run(config_updates=bestExperimentByDataset('pamap2').to_dict()['config'] | bs_128,
+                      meta_info=meta)
