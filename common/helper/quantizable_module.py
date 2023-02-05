@@ -17,6 +17,11 @@ class QuantizationType(enum.Enum):
   FUSE_ONLY = "FUSE_ONLY"
 
 
+class QuantizationState(enum.Enum):
+  TRAIN_CALIBRATE = "TRAIN/CALIBRATE"
+  QUANTIZED = "QUANTIZED"
+
+
 class QuantizationMode():
 
   def __init__(self,
@@ -97,10 +102,6 @@ class QuantizationMode():
     return self._quantization_type == QuantizationType.FUSE_ONLY
 
   @property
-  def is_propagate_qconfig(self) -> bool:
-    return self._propagate_qconfig
-
-  @property
   def needs_fusion(self) -> bool:
     return self.is_fuse_only or (self.is_quantized and len(self.operator_fuse_list) > 0)
 
@@ -113,20 +114,12 @@ class QuantizationMode():
     return not self.is_quantized and self.has_quantized_input
 
   @property
-  def needs_input_qconfig(self) -> bool:
-    return self.needs_input_quantize or self.needs_input_dequantize
-
-  @property
   def needs_output_quantize(self) -> bool:
     return not self.is_quantized and self.has_quantized_output
 
   @property
   def needs_output_dequantize(self) -> bool:
     return self.is_quantized and not self.has_quantized_output
-
-  @property
-  def needs_output_qconfig(self) -> bool:
-    return self.needs_output_quantize or self.needs_output_dequantize
 
   @property
   def needs_quant_wrapper(self) -> bool:
@@ -136,10 +129,6 @@ class QuantizationMode():
         self.needs_output_quantize,
         self.needs_output_dequantize,
     ))
-
-  @property
-  def needs_qconfig(self) -> bool:
-    return self.is_quantized or self.needs_quant_wrapper
 
 
 class QuantizationModeMapping():
@@ -302,6 +291,8 @@ def applyQuantizationModeMapping(module: torch.nn.Module,
 
   _removeQuantizationModes(module=module)
 
+  setattr(module, 'quantization_state', QuantizationState.TRAIN_CALIBRATE)
+
   return tq.prepare(model=module,
                     observer_non_leaf_module_list=set(
                         tq.get_default_qat_module_mappings().values()),
@@ -309,4 +300,6 @@ def applyQuantizationModeMapping(module: torch.nn.Module,
 
 
 def applyConversionAfterModeMapping(module: torch.nn.Module, inplace: bool = False):
-  return tq.convert(module=module, inplace=inplace)
+  module = tq.convert(module=module, inplace=inplace)
+  setattr(module, 'quantization_state', QuantizationState.QUANTIZED)
+  return module
