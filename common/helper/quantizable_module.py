@@ -216,12 +216,6 @@ class QuantizationWrapper(torch.nn.Module):
 
 def applyQuantizationModePreparations(module: torch.nn.Module,
                                       quantization_mode: QuantizationMode) -> torch.nn.Module:
-  # Install qconfig
-  if quantization_mode.is_quantized:
-    setattr(module, 'qconfig', quantization_mode.qconfig)
-  else:
-    setattr(module, 'qconfig', None)
-
   # Wrap if needed
   if quantization_mode.needs_quant_wrapper:
     module = QuantizationWrapper(
@@ -233,9 +227,18 @@ def applyQuantizationModePreparations(module: torch.nn.Module,
         output_dequantize=quantization_mode.needs_output_dequantize,
     )
 
+  # Install qconfig
+  if quantization_mode.is_quantized:
+    setattr(module, 'qconfig', quantization_mode.qconfig)
+  else:
+    setattr(module, 'qconfig', None)
+
   # apply special QAT conversions
   if quantization_mode.is_qat:
-    tq.convert(module=module, mapping=tq.get_default_qat_module_mappings(), inplace=True)
+    tq.convert(module=module,
+               mapping=tq.get_default_qat_module_mappings(),
+               inplace=True,
+               remove_qconfig=False)
 
   return module
 
@@ -263,7 +266,7 @@ def _removeQuantizationModes(module: torch.nn.Module):
       delattr(child, 'quantization_mode')
 
 
-def applyQuantizationModeMapping(module: torch.nn.Module,
+def applyQuantizationModeMapping(module,
                                  quantization_mode_mapping: QuantizationModeMapping,
                                  inplace: bool = False):
   if not inplace:
@@ -278,7 +281,6 @@ def applyQuantizationModeMapping(module: torch.nn.Module,
 
     reassign = {}
     for name, child in m.named_children():
-      print(name)
 
       if hasattr(child, 'quantization_mode'):
         assert isinstance(child.quantization_mode, QuantizationMode)
@@ -299,7 +301,7 @@ def applyQuantizationModeMapping(module: torch.nn.Module,
                     inplace=True)
 
 
-def applyConversionAfterModeMapping(module: torch.nn.Module, inplace: bool = False):
+def applyConversionAfterModeMapping(module, inplace: bool = False):
   module = tq.convert(module=module, inplace=inplace)
   setattr(module, 'quantization_state', QuantizationState.QUANTIZED)
   return module
