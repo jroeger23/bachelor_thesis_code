@@ -202,6 +202,8 @@ class QuantizationMode():
         self.needs_input_dequantize,
         self.needs_output_quantize,
         self.needs_output_dequantize,
+        self.is_qat,  # Special conversion requires wrapped module
+        self.is_ptdq,  # Special conversion requires wrapped module
     ))
 
 
