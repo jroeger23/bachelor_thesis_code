@@ -6,9 +6,12 @@ import torch
 import torch.ao.quantization as tq
 from pypapi import events as papi_evt
 from pypapi import papi_high
-from common.helper import QConfigFactory
+from common.helper import QuantizationModeMapping, QuantizationState, applyConversionAfterModeMapping, applyQuantizationModeMapping
 
 logger = logging.getLogger(__name__)
+
+KEY_QS = 'quantization_state'
+KEY_QM = 'quantization_mapping'
 
 
 def orthogonalInitialization(module, nonlinearity):
@@ -205,10 +208,6 @@ class CNNIMU(pl.LightningModule):
     self.save_hyperparameters()
     self.extra_hyper_params = extra_hyper_params
 
-    # De-/Quantization stubs (input and output quantization)
-    self.imu_quantizer = torch.nn.ModuleList([torch.quantization.QuantStub() for _ in imu_sizes])
-    self.dequantizer = torch.quantization.DeQuantStub()
-
     # All IMU conv pipelines
     pipelines = [CNNIMUPipeline(n_blocks=n_blocks, conv_channels=conv_channels) for _ in imu_sizes]
 
@@ -263,6 +262,9 @@ class CNNIMU(pl.LightningModule):
 
     tq.fuse_modules(model=self.fc, modules_to_fuse=['1', '2'], inplace=True)
 
+  def storeQuantizationModeMapping(self, q_mode_map: QuantizationModeMapping) -> None:
+    setattr(self, KEY_QM, q_mode_map)
+
   def forward(self, imu_x: t.List[torch.Tensor]) -> torch.Tensor:
     """Forward pass a list of IMU data batches
 
@@ -275,51 +277,39 @@ class CNNIMU(pl.LightningModule):
 
     # Torchscript only allows zip of same container types, such that this enumerate hack is needed
     pipe_outputs = [
-        p_fc(p(q(imu_x[i][None, None, :, :] if imu_x[i].ndim == 2 else imu_x[i][:, None, :, :])))
-        for i, (p_fc, p, q) in enumerate(zip(self.pipe_fc, self.pipelines, self.imu_quantizer))
+        p_fc(p(imu_x[i][None, None, :, :] if imu_x[i].ndim == 2 else imu_x[i][:, None, :, :]))
+        for i, (p_fc, p) in enumerate(zip(self.pipe_fc, self.pipelines))
     ]
     combined = self.fuse(pipe_outputs)
     y = self.fc(combined)
-    return self.dequantizer(y)
+    return y
 
   def on_load_checkpoint(self, checkpoint: t.Dict[str, t.Any]) -> None:
-    if 'qconfig_factory' not in checkpoint:
+    if KEY_QS in checkpoint:
+      setattr(self, KEY_QS, checkpoint[KEY_QS])
+    else:
       return
 
-    # Restore quantization configuration
-    logger.info(f'Restoring Model Quantization')
-    self.fuse_modules()
-    self.qconfig_factory = checkpoint['qconfig_factory']
-    self.quantization_state = checkpoint[
-        'quantization_state'] if 'quantization_state' in checkpoint else 'PTQ'
-    logger.info(f'QuantizationState: {self.quantization_state}')
-    logger.info(f'QConfigFactory: {self.qconfig_factory}')
-    assert isinstance(self.qconfig_factory, QConfigFactory)
-    self.qconfig = self.qconfig_factory.getQConfig()
-
-    if self.quantization_state == 'PTQ':
-      self.eval()
-      tq.prepare(model=self, inplace=True)
-      tq.convert(module=self, inplace=True, remove_qconfig=True)
-    elif self.quantization_state == 'QAT_TRAIN':
-      tq.prepare_qat(model=self, inplace=True)
-      self.train()
-    elif self.quantization_state == 'QAT_DONE':
-      self.train()
-      tq.prepare_qat(model=self, inplace=True)
-      self.eval()
-      tq.convert(module=self, inplace=True, remove_qconfig=True)
+    if KEY_QM in checkpoint:
+      setattr(self, KEY_QM, checkpoint[KEY_QM])
     else:
-      raise ValueError(f'Unknown quantization state {self.quantization_state}')
+      raise ValueError(f'Checkpoint contains {KEY_QS} but no {KEY_QM}')
+
+    applyQuantizationModeMapping(module=self,
+                                 quantization_mode_mapping=getattr(self, KEY_QM),
+                                 inplace=True)
+
+    if checkpoint[KEY_QS] == QuantizationState.QUANTIZED:
+      applyConversionAfterModeMapping(module=self, inplace=True)
 
   def on_save_checkpoint(self, checkpoint: t.Dict[str, t.Any]) -> None:
-    if not hasattr(self, 'qconfig_factory'):
-      return
+    qs = getattr(self, KEY_QS, None)
+    qm = getattr(self, KEY_QM, None)
 
-    # save quantization factory (qconfig itself is not pickleable)
-    checkpoint['qconfig_factory'] = self.qconfig_factory
-    checkpoint['quantization_state'] = self.quantization_state if hasattr(
-        self, 'quantization_state') else 'PTQ'
+    if qs is not None:
+      checkpoint[KEY_QS] = qs
+    if qm is not None:
+      checkpoint[KEY_QM] = qm
 
   def training_step(self, batch: t.Tuple[t.List[torch.Tensor], torch.Tensor],
                     batch_ix) -> torch.Tensor:
