@@ -1,5 +1,7 @@
-from ptq_cnn_imu import ex as ptq_experiment
 import argparse
+from pathlib import Path
+
+from ptq_cnn_imu import ex as ptq_experiment
 
 ACTIVATION_OBSERVER = [
     ('activation_observer', 'torch.ao.quantization.HistogramObserver'),
@@ -31,6 +33,8 @@ BASE = {
     'output_layer_quantization': 'static',
 }
 
+meta = {'my_meta': {'runner': Path(__file__).name}}
+
 
 def allConfigs():
   variable = [
@@ -53,4 +57,4 @@ if args.dry_run:
   print(f'Would run {len(configs)} configurations')
 else:
   for x in configs:
-    ptq_experiment.run(config_updates=x)
+    ptq_experiment.run(config_updates=x, meta_info=meta)
