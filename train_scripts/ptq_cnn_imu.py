@@ -164,11 +164,11 @@ def buildQuantizationModeMapping(weight_observer, weight_observer_args, activati
 
 @ex.config
 def defautltConfig():
-  use_dataset = 'opportunity'
+  use_dataset = 'lara'
   trained_model_run_id = bestRunIdByDataset(use_dataset)
   backend = 'fbgemm'
   batch_size = 128
-  limit_calibration_set = 5
+  limit_calibration_set = None
   n_bits = 7
   activation_observer = 'torch.ao.quantization.HistogramObserver'  # Cannot be 'PerChannel'
   activation_qscheme = 'torch.per_tensor_affine'
@@ -196,9 +196,9 @@ def defautltConfig():
 
   imu_input_quantization = 'static'
   imu_pipeline_quantization = 'static'
-  imu_pipeline_fc_quantization = 'dynamic'
-  fc_quantization = 'dynamic'
-  output_layer_quantization = 'dynamic'
+  imu_pipeline_fc_quantization = 'static'
+  fc_quantization = 'static'
+  output_layer_quantization = 'static'
 
   quantization_mode_mapping = buildQuantizationModeMapping(
       weight_observer, weight_observer_args, activation_observer, activation_observer_args,
