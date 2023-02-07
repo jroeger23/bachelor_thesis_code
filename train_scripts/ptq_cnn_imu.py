@@ -263,6 +263,7 @@ def main(use_dataset: str, trained_model_run_id: int, backend: str, batch_size: 
   prepared_model.eval()
   prepared_model.trainer = None
   q_model = applyConversionAfterModeMapping(prepared_model, inplace=False)
+  logger.info(f'Quantized:\n{q_model}')
 
   # Test the quantized model
   trainer_eval = pl.Trainer(logger=SacredLogger(_run),
