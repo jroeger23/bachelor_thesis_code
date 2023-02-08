@@ -5,7 +5,7 @@ from ptq_cnn_imu import ex as ptq_experiment
 
 ACTIVATION_OBSERVER = [
     ('activation_observer', 'torch.ao.quantization.HistogramObserver'),
-    ('activation_observer', 'torch.ao.quantization.MovingAverageMinMaxObserver'),
+    ('activation_observer', 'torch.ao.quantization.MinMaxObserver'),
 ]
 
 WEIGHT_OBSERVER = {
@@ -28,36 +28,27 @@ USE_DATASET = {
     ('use_dataset', 'pamap2'),
 }
 
-QUANTIZATION_MODES = [{
-    'imu_input_quantization': 'none',
-    'imu_pipeline_quantization': 'static',
-    'imu_pipeline_fc_quantization': 'static',
-    'fc_quantization': 'static',
-    'output_layer_quantization': 'none',
-}, {
+BASE = {
+    'weight_range': 'full',
     'imu_input_quantization': 'static',
     'imu_pipeline_quantization': 'static',
     'imu_pipeline_fc_quantization': 'static',
     'fc_quantization': 'static',
     'output_layer_quantization': 'static',
-}]
-
-BASE = {
-    'weight_range': 'full',
 }
 
 meta = {
     'my_meta': {
         'runner': Path(__file__).name,
-        'version': 0,
+        'version': 1,
     }
 }
 
 
 def allConfigs():
   variable = [
-      dict([ao, wo, b, d]) | qmode | BASE for ao in ACTIVATION_OBSERVER for wo in WEIGHT_OBSERVER
-      for qmode in QUANTIZATION_MODES for b in N_BITS for d in USE_DATASET
+      dict([ao, wo, b, d]) | BASE for ao in ACTIVATION_OBSERVER for wo in WEIGHT_OBSERVER
+      for b in N_BITS for d in USE_DATASET
   ]
   return variable
 
