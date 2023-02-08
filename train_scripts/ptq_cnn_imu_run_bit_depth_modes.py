@@ -43,10 +43,10 @@ IMU_PIPELINE_QUANTIZATION = [
 
 IMU_PIPELINE_FC_QUANTIZATION = [
     {
-        'imu_fc_quantization': 'static',
+        'imu_pipeline_fc_quantization': 'static',
     },
     {
-        'imu_fc_quantization': 'none',
+        'imu_pipeline_fc_quantization': 'none',
     },
 ]
 
