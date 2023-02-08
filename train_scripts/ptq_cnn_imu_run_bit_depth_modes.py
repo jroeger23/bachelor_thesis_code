@@ -79,7 +79,7 @@ QUANTIZATION_MODE = [
 ]
 
 BASE = {
-    'activation_observer': 'torch.ao.quantization.HistogramObserver',
+    'activation_observer': 'torch.ao.quantization.MovingAverageMinMaxObserver',
     'weight_observer': 'torch.ao.quantization.PerChannelMinMaxObserver',
 }
 
