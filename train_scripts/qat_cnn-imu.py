@@ -10,7 +10,9 @@ from sacred.observers import MongoObserver
 
 from common.data import LARaDataModule, OpportunityDataModule, Pamap2DataModule
 from common.helper import (GlobalPlaceholder, QConfigFactory, checkpointsById,
-                           getRunCheckpointDirectory, parseMongoConfig)
+                           getRunCheckpointDirectory, parseMongoConfig, QuantizationMode,
+                           QuantizationModeMapping, applyConversionAfterModeMapping,
+                           applyQuantizationModeMapping)
 from common.model import CNNIMU
 from common.pl_components import (MonitorAcc, MonitorBatchTime, MonitorWF1, SacredLogger)
 
@@ -81,10 +83,86 @@ def bestRunIdByDataset(dataset: str) -> int:
   return ex.to_dict()['_id']
 
 
+def buildQuantizationModeMapping(weight_observer, weight_observer_args, activation_observer,
+                                 activation_observer_args, imu_input_quantization,
+                                 imu_pipeline_quantization, imu_pipeline_fc_quantization,
+                                 fc_quantization, output_layer_quantization):
+  qat_qconfig_factory = QConfigFactory(
+      GlobalPlaceholder(activation_observer, **activation_observer_args),
+      GlobalPlaceholder(weight_observer, **weight_observer_args))
+
+  if imu_input_quantization == 'qat':
+    q_block0 = QuantizationMode.qat(False,
+                                    True,
+                                    operator_fuse_list=[['conv1', 'relu1'], ['conv2', 'relu2']],
+                                    qconfig_factory=qat_qconfig_factory)
+  elif imu_input_quantization == 'none':
+    q_block0 = QuantizationMode.none(False, False, qconfig_factory=qat_qconfig_factory)
+  else:
+    raise ValueError(f'Unknown {imu_input_quantization=}')
+
+  if imu_pipeline_quantization == 'qat':
+    q_blockn = QuantizationMode.qat(imu_input_quantization == 'qat',
+                                    True,
+                                    operator_fuse_list=[['conv1', 'relu1'], ['conv2', 'relu2']],
+                                    qconfig_factory=qat_qconfig_factory)
+  elif imu_pipeline_quantization == 'none':
+    q_blockn = QuantizationMode.none(imu_input_quantization == 'qat',
+                                     False,
+                                     qconfig_factory=qat_qconfig_factory)
+  else:
+    raise ValueError(f'Unknown {imu_pipeline_quantization=}')
+
+  if imu_pipeline_fc_quantization == 'qat':
+    q_pfc = QuantizationMode.qat(imu_pipeline_quantization == 'qat',
+                                 True,
+                                 qconfig_factory=qat_qconfig_factory,
+                                 operator_fuse_list=['1', '2'])
+  elif imu_pipeline_fc_quantization == 'none':
+    q_pfc = QuantizationMode.none(imu_pipeline_quantization == 'qat',
+                                  False,
+                                  qconfig_factory=qat_qconfig_factory)
+  else:
+    raise ValueError(f'Unknown {imu_pipeline_fc_quantization=}')
+
+  q_fc = QuantizationMode.fuse_only(operator_fuse_list=['1', '2'])
+  if fc_quantization == 'qat':
+    q_fc_0 = QuantizationMode.qat(imu_pipeline_fc_quantization == 'qat',
+                                  True, [],
+                                  qconfig_factory=qat_qconfig_factory)
+  elif fc_quantization == 'none':
+    q_fc_0 = QuantizationMode.none(imu_pipeline_fc_quantization == 'qat',
+                                   False,
+                                   qconfig_factory=qat_qconfig_factory)
+  else:
+    raise ValueError(f'Unknown {fc_quantization=}')
+
+  if output_layer_quantization == 'qat':
+    q_fc_1 = QuantizationMode.qat(fc_quantization == 'qat',
+                                  False, [],
+                                  qconfig_factory=qat_qconfig_factory)
+  elif output_layer_quantization == 'none':
+    q_fc_1 = QuantizationMode.none(fc_quantization == 'qat',
+                                   False,
+                                   qconfig_factory=qat_qconfig_factory)
+  else:
+    raise ValueError(f'Unknown {output_layer_quantization=}')
+
+  q_mode_map = QuantizationModeMapping()
+  q_mode_map.addRegexMapping(r'pipelines.\d*.blocks.0$', q_block0)
+  q_mode_map.addRegexMapping(r'pipelines.\d*.blocks.\d*$', q_blockn)
+  q_mode_map.addRegexMapping(r'pipe_fc.\d*$', q_pfc)
+  q_mode_map.addNameMapping(r'fc', q_fc)
+  q_mode_map.addNameMapping('fc.1', q_fc_0)
+  q_mode_map.addNameMapping('fc.4', q_fc_1)
+
+  return q_mode_map
+
+
 @ex.config
 def defaultConfig():
   use_dataset = 'lara'
-  base_experiment_id = bestRunIdByDataset(use_dataset)
+  trained_model_run_id = bestRunIdByDataset(use_dataset)
   backend = 'fbgemm'
   batch_size = 128
   max_epochs = 10
@@ -129,12 +207,22 @@ def defaultConfig():
           GlobalPlaceholder(weight_qscheme)
   }
 
+  imu_input_quantization = 'qat'
+  imu_pipeline_quantization = 'qat'
+  imu_pipeline_fc_quantization = 'qat'
+  fc_quantization = 'qat'
+  output_layer_quantization = 'qat'
+
+  quantization_mode_mapping = buildQuantizationModeMapping(
+      weight_observer, weight_observer_args, activation_observer, activation_observer_args,
+      imu_input_quantization, imu_pipeline_quantization, imu_pipeline_fc_quantization,
+      fc_quantization, output_layer_quantization)
+
 
 @ex.automain
-def main(use_dataset, backend, batch_size, max_epochs, base_experiment_id, loss_patience,
-         validation_interval, activation_observer, activation_observer_args, weight_observer,
-         weight_observer_args, extra_hyper_params, _run) -> None:
-  base_cfg = loader.find_by_id(base_experiment_id).to_dict()['config']
+def main(use_dataset, backend, batch_size, max_epochs, trained_model_run_id, loss_patience,
+         validation_interval, quantization_mode_mapping, extra_hyper_params, _run) -> None:
+  base_cfg = loader.find_by_id(trained_model_run_id).to_dict()['config']
   torch.backends.quantized.engine = backend
 
   # load training data
@@ -158,21 +246,15 @@ def main(use_dataset, backend, batch_size, max_epochs, base_experiment_id, loss_
     raise ValueError(f'Unexpected dataset {use_dataset}')
 
   # Load the floating point model
-  logger.info(f'Loading checkpoint of run {base_experiment_id}')
-  ckpt = checkpointsById(root='./logs/checkpoints', run_id=base_experiment_id)['best_wf1']
+  logger.info(f'Loading checkpoint of run {trained_model_run_id}')
+  ckpt = checkpointsById(root='./logs/checkpoints', run_id=trained_model_run_id)['best_wf1']
   fp32_model = CNNIMU.load_from_checkpoint(checkpoint_path=ckpt)
 
   # Prepare for QAT
-  fp32_model.fuse_modules()
-  fp32_model.qconfig_factory = QConfigFactory(
-      GlobalPlaceholder(tq.FakeQuantize,
-                        observer=GlobalPlaceholder(activation_observer,
-                                                   **activation_observer_args)),
-      GlobalPlaceholder(tq.FakeQuantize,
-                        observer=GlobalPlaceholder(weight_observer, **weight_observer_args)))
-  fp32_model.qconfig = fp32_model.qconfig_factory.getQConfig()
-  qat_model = tq.prepare_qat(model=fp32_model.train(), inplace=False)
-  qat_model.quantization_state = 'QAT_TRAIN'
+  setattr(fp32_model, 'quantization_mapping', quantization_mode_mapping)
+  qat_model = applyQuantizationModeMapping(module=fp32_model,
+                                           quantization_mode_mapping=quantization_mode_mapping,
+                                           inplace=False)
 
   # Update optimizer config in qat_model
   qat_model.extra_hyper_params.update(extra_hyper_params)
@@ -210,8 +292,7 @@ def main(use_dataset, backend, batch_size, max_epochs, base_experiment_id, loss_
   qat_model = CNNIMU.load_from_checkpoint(best_wf1_ckpt.best_model_path)
   qat_model.trainer = None
   qat_model.eval()
-  q_model = tq.convert(module=qat_model, inplace=False)
-  q_model.quantization_state = 'QAT_DONE'
+  q_model = applyConversionAfterModeMapping(module=qat_model, inplace=False)
 
   # Test and save qmodel
   trainer.test(model=q_model, datamodule=data_module)
