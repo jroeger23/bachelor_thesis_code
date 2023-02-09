@@ -378,6 +378,10 @@ class CNNIMU(pl.LightningModule):
       return torch.optim.Adam(params=self.parameters())
 
     if self.extra_hyper_params['optimizer'] == 'Adam':
+      if hasattr(self, 'optimizer_restore'):
+        opt = torch.optim.Adam(params=self.parameters())
+        opt.load_state_dict(getattr(self, 'optimizer_restore'))
+        return opt
       adapt = {
           k: self.extra_hyper_params[k]
           for k in ('lr', 'betas', 'momentum')
@@ -385,6 +389,10 @@ class CNNIMU(pl.LightningModule):
       }
       return torch.optim.Adam(params=self.parameters(), **adapt)
     elif self.extra_hyper_params['optimizer'] == 'RMSProp':
+      if hasattr(self, 'optimizer_restore'):
+        opt = torch.optim.RMSprop(params=self.parameters())
+        opt.load_state_dict(getattr(self, 'optimizer_restore'))
+        return opt
       adapt = {
           k: self.extra_hyper_params[k]
           for k in ('lr', 'alpha', 'weight_decay', 'momentum')

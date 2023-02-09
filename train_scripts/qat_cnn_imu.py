@@ -141,6 +141,7 @@ def defaultConfig():
   loss_patience = 10
   optimizer = 'Adam'
   extra_hyper_params = {}
+  restore_optimizer = True
   if optimizer == 'Adam':
     extra_hyper_params['optimizer'] = 'Adam'
     extra_hyper_params['lr'] = 1e-3
@@ -192,7 +193,8 @@ def defaultConfig():
 
 @ex.automain
 def main(use_dataset, backend, batch_size, max_epochs, trained_model_run_id, loss_patience,
-         validation_interval, quantization_mode_mapping, extra_hyper_params, _run) -> None:
+         validation_interval, quantization_mode_mapping, restore_optimizer, extra_hyper_params,
+         _run) -> None:
   base_cfg = loader.find_by_id(trained_model_run_id).to_dict()['config']
   torch.backends.quantized.engine = backend
 
@@ -226,9 +228,10 @@ def main(use_dataset, backend, batch_size, max_epochs, trained_model_run_id, los
   qat_model = applyQuantizationModeMapping(module=fp32_model,
                                            quantization_mode_mapping=quantization_mode_mapping,
                                            inplace=False)
-
   # Update optimizer config in qat_model
   qat_model.extra_hyper_params.update(extra_hyper_params)
+  if restore_optimizer:
+    qat_model.optimizer_restore = torch.load(ckpt)['optimizer_states'][0]
 
   # Run QAT
   best_wf1_ckpt = pl_cb.ModelCheckpoint(
