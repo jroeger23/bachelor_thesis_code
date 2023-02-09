@@ -9,10 +9,10 @@ from pytorch_lightning import callbacks as pl_cb
 from sacred.observers import MongoObserver
 
 from common.data import LARaDataModule, OpportunityDataModule, Pamap2DataModule
-from common.helper import (GlobalPlaceholder, QConfigFactory, checkpointsById,
-                           getRunCheckpointDirectory, parseMongoConfig, QuantizationMode,
+from common.helper import (GlobalPlaceholder, QConfigFactory, QuantizationMode,
                            QuantizationModeMapping, applyConversionAfterModeMapping,
-                           applyQuantizationModeMapping)
+                           applyQuantizationModeMapping, checkpointsById, getRunCheckpointDirectory,
+                           parseMongoConfig)
 from common.model import CNNIMU
 from common.pl_components import (MonitorAcc, MonitorBatchTime, MonitorWF1, SacredLogger)
 
@@ -297,5 +297,5 @@ def main(use_dataset, backend, batch_size, max_epochs, trained_model_run_id, los
   # Test and save qmodel
   trainer.test(model=q_model, datamodule=data_module)
   trainer.save_checkpoint(filepath=getRunCheckpointDirectory(root='logs/checkpoints',
-                                                             _run=_run).joinpath('qmodel.ckpt'),
+                                                             _run=_run).joinpath('model.ckpt'),
                           weights_only=True)
