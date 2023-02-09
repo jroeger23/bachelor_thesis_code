@@ -4,15 +4,14 @@ import incense
 import pytorch_lightning as pl
 import sacred
 import torch
-import torch.ao.quantization as tq
 from pytorch_lightning import callbacks as pl_cb
 from sacred.observers import MongoObserver
 
 from common.data import LARaDataModule, OpportunityDataModule, Pamap2DataModule
 from common.helper import (GlobalPlaceholder, QConfigFactory, QuantizationMode,
                            QuantizationModeMapping, applyConversionAfterModeMapping,
-                           applyQuantizationModeMapping, checkpointsById, getRunCheckpointDirectory,
-                           parseMongoConfig)
+                           applyQuantizationModeMapping, bestExperimentWF1, checkpointsById,
+                           getRunCheckpointDirectory, parseMongoConfig)
 from common.model import CNNIMU
 from common.pl_components import (MonitorAcc, MonitorBatchTime, MonitorWF1, SacredLogger)
 
@@ -24,63 +23,35 @@ logger = logging.getLogger(__name__)
 
 
 def bestRunIdByDataset(dataset: str) -> int:
-  lara_query = {
-      '$and': [
-          {
-              'experiment.name': 'CNN-IMU_LARa'
-          },
-          {
-              '_id': {
-                  '$gte': 215
-              }
-          },
-          {
-              'status': 'COMPLETED'
-          },
-      ]
-  }
-  opportunity_query = {
-      '$and': [
-          {
-              'experiment.name': 'CNN-IMU_Opportunity-Locomotion'
-          },
-          {
-              '_id': {
-                  '$gte': 173
-              }
-          },
-          {
-              'status': 'COMPLETED'
-          },
-      ]
-  }
-  pamap2_query = {
-      '$and': [
-          {
-              'experiment.name': 'CNN-IMU_Pamap2(activity_labels)'
-          },
-          {
-              '_id': {
-                  '$gte': 183
-              }
-          },
-          {
-              'status': 'COMPLETED'
-          },
-      ]
-  }
-  ex_wf1 = lambda e: e.metrics['test/wf1'].max()
-
   if dataset == 'lara':
-    ex = max(loader.find(lara_query), key=ex_wf1)
+    return bestExperimentWF1(loader,
+                             experiment_name='CNN-IMU_LARa',
+                             min_id=None,
+                             max_id=None,
+                             my_meta={
+                                 'runner': 'cnn_imu_rerun_best.py',
+                                 'flags': 'disabled_puppet'
+                             })[1]
   elif dataset == 'opportunity':
-    ex = max(loader.find(opportunity_query), key=ex_wf1)
+    return bestExperimentWF1(loader,
+                             experiment_name='CNN-IMU_Opportunity-Locomotion',
+                             min_id=None,
+                             max_id=None,
+                             my_meta={
+                                 'runner': 'cnn_imu_rerun_best.py',
+                                 'flags': 'disabled_puppet'
+                             })[1]
   elif dataset == 'pamap2':
-    ex = max(loader.find(pamap2_query), key=ex_wf1)
+    return bestExperimentWF1(loader,
+                             experiment_name='CNN-IMU_Pamap2(activity_labels)',
+                             min_id=None,
+                             max_id=None,
+                             my_meta={
+                                 'runner': 'cnn_imu_rerun_best.py',
+                                 'flags': 'disabled_puppet'
+                             })[1]
   else:
-    raise ValueError(f'Unexpected dataset {dataset}')
-
-  return ex.to_dict()['_id']
+    raise ValueError(f'No such Dataset {dataset}')
 
 
 def buildQuantizationModeMapping(weight_observer, weight_observer_args, activation_observer,
