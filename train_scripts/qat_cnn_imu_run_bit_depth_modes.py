@@ -89,8 +89,11 @@ def allConfigs(use_v2: bool, use_v3: bool):
 
 parser = argparse.ArgumentParser(description='Run relevant mode configurations for qat_cnn_imu')
 parser.add_argument('--dry_run', '-d', action='store_true')
-parser.add_argument('--use_v2', action='store_true')
-parser.add_argument('--use_v3', action='store_true')
+parser.add_argument('--use_v2',
+                    action='store_true',
+                    help='Run additional config (V2) otherwise (V1)')
+parser.add_argument('--use_v3', action='store_true', help='Run all configs (V1+V2)')
+parser.add_argument('--repeat', type=int, default=1)
 args = parser.parse_args()
 
 configs = allConfigs(args.use_v2, args.use_v3)
@@ -106,7 +109,8 @@ if args.dry_run:
   for x in configs:
     print(x)
 
-  print(f'Would run {len(configs)} configurations')
+  print(f'Would run {len(configs)} configurations {args.repeat} times')
 else:
-  for x in configs:
-    qat_experiment.run(config_updates=x, meta_info=meta)
+  for _ in range(args.repeat):
+    for x in configs:
+      qat_experiment.run(config_updates=x, meta_info=meta)
