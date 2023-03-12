@@ -44,7 +44,7 @@ pamap2_names = [
     'Treppen hinaufgehen',
     'Treppen hinabgehen',
     'Staubsaugen',
-    'Seil springen',
+    'Seilspringen',
 ]
 opportunity_names = [
     'Andere',
