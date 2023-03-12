@@ -8,8 +8,7 @@ pamap2 = Pamap2DataModule(batch_size=1,
                           window=100,
                           stride=33,
                           sample_frequency=30,
-                          use_transient_class=False,
-                          for_legacy=True)
+                          use_transient_class=False)
 pamap2.setup('fit')
 pamap2.setup('validate')
 pamap2.setup('test')
