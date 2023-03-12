@@ -24,7 +24,7 @@ def default_config():
   window = 100
   stride = 22
   sample_frequency = 30
-  use_transient_class = True
+  use_transient_class = False
   batch_size = 64
   cnn_imu_blocks = 2
   cnn_imu_channels = 64
