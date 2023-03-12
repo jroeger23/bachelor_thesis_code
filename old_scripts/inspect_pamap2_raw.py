@@ -35,9 +35,12 @@ for a in ax_a:
   a.set_yticks([])
   a.set_xticks([])
 
-ax_a[0].plot(segment1[:, 1])
-ax_a[1].plot(segment2[:, 1])
-ax_a[2].plot(segment3[:, 1])
+ax_a[0].plot(segment1[:, 3])
+ax_a[1].plot(segment2[:, 3])
+ax_a[2].plot(segment3[:, 3])
+ax_a[0].set_title('Laufen')
+ax_a[1].set_title('Rennen')
+ax_a[2].set_title('Fahrrad fahren')
 fig_a.tight_layout()
 
 fig_b, ax_b = plt.subplots(9, 1)
