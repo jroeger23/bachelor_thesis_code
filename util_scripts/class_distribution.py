@@ -100,6 +100,6 @@ def mkPlot(names, counts):
   return fig
 
 
-mkPlot(pamap2_names, pamap2_counts).savefig('pamap2_distrib.png', dpi=300)
-mkPlot(opportunity_names, opportunity_counts).savefig('opportunity_distrib.png', dpi=300)
-mkPlot(lara_names, lara_counts).savefig('lara_distrib.png', dpi=300)
+mkPlot(pamap2_names, pamap2_counts).savefig('pamap2_distrib.pdf')
+mkPlot(opportunity_names, opportunity_counts).savefig('opportunity_distrib.pdf')
+mkPlot(lara_names, lara_counts).savefig('lara_distrib.pdf')
