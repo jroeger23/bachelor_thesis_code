@@ -85,6 +85,7 @@ lara_counts = {
 
 def mkPlot(names, counts):
   fig, ax = plt.subplots()
+  fig.set_dpi(300)
   fig.set_figwidth(fig.get_figwidth() * 1.5)
 
   btm = None
