@@ -7,7 +7,7 @@ This repository contains experiments and a framework for quantization of neural 
 - The `common` directory contains common code used by many experiments
 - The `train_scripts` directory contains all experiments. They only require 
 a [Sacred](https://sacred.readthedocs.io/en/stable/index.html) MongoDB for metric logging.
-- The `eval_notebook` contain the analysis of all logged metrics produced by the experiments.
+- The `eval_notebook` directory contains the analysis of all logged metrics produced by the experiments.
 
 ## Thesis
 
